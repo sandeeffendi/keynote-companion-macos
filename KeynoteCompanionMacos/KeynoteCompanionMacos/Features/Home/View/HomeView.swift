@@ -29,6 +29,11 @@ struct HomeView: View {
             Button("Go To Session") {
                 router.push(.session(.main))
             }
+            
+            Button("Go To Recap") {
+                router.push(.recap(.biawak))
+            }
+
 
         }
         .padding()

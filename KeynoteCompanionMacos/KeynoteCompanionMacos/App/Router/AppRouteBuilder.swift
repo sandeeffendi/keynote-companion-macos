@@ -20,6 +20,9 @@ struct AppRouteBuilder {
 
         case .session(let sessionRoute):
             SessionRouteBuilder.build(sessionRoute)
+            
+        case .recap(let recapRoute):
+            RecapRouteBuilder.build(recapRoute)
         }
     }
 }
