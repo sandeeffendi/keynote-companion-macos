@@ -17,6 +17,12 @@ struct AppRouteBuilder {
 
         case .settings(let settingsRoute):
             SettingsRouteBuilder.build(settingsRoute)
+
+        case .session(let sessionRoute):
+            SessionRouteBuilder.build(sessionRoute)
+            
+        case .recap(let recapRoute):
+            RecapRouteBuilder.build(recapRoute)
             
         case.loadingScreen(let loadingScreenRoute):
             LoadingScreenRouteBuilder.build(loadingScreenRoute)

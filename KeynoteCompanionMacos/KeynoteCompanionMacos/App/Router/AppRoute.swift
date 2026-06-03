@@ -10,6 +10,8 @@ import Foundation
 enum AppRoute: Hashable {
     case home(HomeRoute)
     case settings(SettingsRoute)
+    case session(SessionRoute)
+    case recap(RecapRoute)
     case loadingScreen(LoadingScreenRoute)
     case history(HistoryRoute)
 }
