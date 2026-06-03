@@ -10,4 +10,5 @@ import Foundation
 enum AppRoute: Hashable {
     case home(HomeRoute)
     case settings(SettingsRoute)
+    case profile(ProfileRoute)
 }

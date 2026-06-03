@@ -26,6 +26,10 @@ struct HomeView: View {
                 router.push(.settings(.main))
             }
 
+            Button("Go To Profile") {
+                router.push(.profile(.main))
+            }
+
         }
         .padding()
         .navigationTitle("Home")
