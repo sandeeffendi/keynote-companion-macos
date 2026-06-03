@@ -25,6 +25,10 @@ struct HomeView: View {
             Button("Go To Settings") {
                 router.push(.settings(.main))
             }
+            
+            Button("Go To Loading Screen (Dummy)") {
+                router.push(.loadingScreen(.main))
+            }
 
         }
         .padding()
