@@ -23,7 +23,11 @@ struct HomeView: View {
                 .font(.largeTitle)
 
             Button("Go To Settings") {
-                router.push(.settings(.main))
+                router.push(.settings(.general))
+            }
+
+            Button("Go To Session") {
+                router.push(.session(.main))
             }
 
         }

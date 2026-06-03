@@ -11,10 +11,17 @@ struct SettingsRouteBuilder {
     @ViewBuilder
     static func build(_ route: SettingsRoute) -> some View {
         switch route {
-        case .main:
+        case .general:
             SettingsView(
                 viewModel: SettingsViewModel()
             )
+
+        case .account:
+            SettingsView(viewModel: SettingsViewModel())
+
+        case .preference:
+            SettingsView(viewModel: SettingsViewModel())
         }
+
     }
 }
