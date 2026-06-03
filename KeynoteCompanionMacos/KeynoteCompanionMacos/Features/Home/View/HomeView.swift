@@ -25,24 +25,25 @@ struct HomeView: View {
             Button("Go To Settings") {
                 router.push(.settings(.general))
             }
-            
+
             Button("Go To Loading Screen (Dummy)") {
                 router.push(.loadingScreen(.main))
-            Button("Go To History") {
-                router.push(.history(.first))
-            }
+                Button("Go To History") {
+                    router.push(.history(.first))
+                }
 
-            Button("Go To Session") {
-                router.push(.session(.main))
-            }
-            
-            Button("Go To Recap") {
-                router.push(.recap(.biawak))
-            }
+                Button("Go To Session") {
+                    router.push(.session(.main))
+                }
+
+                Button("Go To Recap") {
+                    router.push(.recap(.biawak))
+                }
 
 
+            }
+            .padding()
+            .navigationTitle("Home")
         }
-        .padding()
-        .navigationTitle("Home")
     }
 }
