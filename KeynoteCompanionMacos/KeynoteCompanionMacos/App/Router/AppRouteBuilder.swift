@@ -17,6 +17,9 @@ struct AppRouteBuilder {
 
         case .settings(let settingsRoute):
             SettingsRouteBuilder.build(settingsRoute)
+            
+        case .history(let historyRoute):
+            HistoryRouteBuilder.build(historyRoute)
         }
     }
 }
