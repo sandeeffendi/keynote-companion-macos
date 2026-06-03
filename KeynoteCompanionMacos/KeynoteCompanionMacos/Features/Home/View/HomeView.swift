@@ -26,6 +26,8 @@ struct HomeView: View {
                 router.push(.settings(.main))
             }
             
+            Button("Go To Loading Screen (Dummy)") {
+                router.push(.loadingScreen(.main))
             Button("Go To History") {
                 router.push(.history(.first))
             }
