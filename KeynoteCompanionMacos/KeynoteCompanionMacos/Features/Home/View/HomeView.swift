@@ -25,6 +25,10 @@ struct HomeView: View {
             Button("Go To Settings") {
                 router.push(.settings(.main))
             }
+            
+            Button("Go To History") {
+                router.push(.history(.first))
+            }
 
         }
         .padding()
