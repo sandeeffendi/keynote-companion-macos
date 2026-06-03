@@ -6,3 +6,7 @@
 //
 
 import Foundation
+
+enum RecapRoute: Hashable {
+    case biawak
+}

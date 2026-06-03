@@ -8,11 +8,30 @@
 import SwiftUI
 
 struct RecapView: View {
+    
+    @EnvironmentObject private var route: AppRouter
+    @StateObject var viewModel: RecapViewModel
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 16) {
+            
+            
+            
+            Text("Ini halaman recap")
+
+            Button("pencet ini balik home") {
+                route.popToRoot()
+            }
+            Button("pencet ini balik home") {
+                route.pop()
+            }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Recap")
     }
 }
 
 #Preview {
-    RecapView()
+    RecapView(
+        viewModel: RecapViewModel()
+    )
 }

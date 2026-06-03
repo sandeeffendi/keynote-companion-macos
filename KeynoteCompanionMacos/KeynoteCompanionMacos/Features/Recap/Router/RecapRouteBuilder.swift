@@ -6,3 +6,17 @@
 //
 
 import Foundation
+import SwiftUI
+
+struct RecapRouteBuilder {
+    @ViewBuilder
+
+    static func build(_ route: RecapRoute) -> some View {
+        switch route {
+        case .biawak:
+            RecapView(
+                viewModel: RecapViewModel()
+            )
+        }
+    }
+}
