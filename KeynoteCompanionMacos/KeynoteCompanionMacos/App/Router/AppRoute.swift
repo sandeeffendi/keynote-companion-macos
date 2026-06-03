@@ -11,4 +11,5 @@ enum AppRoute: Hashable {
     case home(HomeRoute)
     case settings(SettingsRoute)
     case loadingScreen(LoadingScreenRoute)
+    case history(HistoryRoute)
 }
