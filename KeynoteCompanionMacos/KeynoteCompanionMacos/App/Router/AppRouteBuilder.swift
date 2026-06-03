@@ -23,6 +23,11 @@ struct AppRouteBuilder {
             
         case .recap(let recapRoute):
             RecapRouteBuilder.build(recapRoute)
+            
+        case.loadingScreen(let loadingScreenRoute):
+            LoadingScreenRouteBuilder.build(loadingScreenRoute)
+        case .history(let historyRoute):
+            HistoryRouteBuilder.build(historyRoute)
         }
     }
 }
