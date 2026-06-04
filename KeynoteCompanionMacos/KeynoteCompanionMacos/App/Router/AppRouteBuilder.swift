@@ -28,6 +28,9 @@ struct AppRouteBuilder {
             LoadingScreenRouteBuilder.build(loadingScreenRoute)
         case .history(let historyRoute):
             HistoryRouteBuilder.build(historyRoute)
+            
+        case .selfie(let selfieRoute):
+            SelfieRouteBuilder.build(selfieRoute)
         }
     }
 }

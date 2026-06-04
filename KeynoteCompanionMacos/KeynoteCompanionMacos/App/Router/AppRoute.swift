@@ -14,4 +14,5 @@ enum AppRoute: Hashable {
     case recap(RecapRoute)
     case loadingScreen(LoadingScreenRoute)
     case history(HistoryRoute)
+    case selfie(SelfieRoute)
 }
