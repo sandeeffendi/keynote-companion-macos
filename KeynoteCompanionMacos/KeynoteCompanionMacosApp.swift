@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct KeynoteCompanionMacosApp: App {
+    @StateObject private var router = AppRouter()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environmentObject(router)
         }
     }
 }
