@@ -40,6 +40,11 @@ struct HomeView: View {
                 router.push(.loadingScreen(.main))
 
             }
+            
+            Button("Go to Selfie Screen") {
+                router.push(.selfie(.selfie))
+            }
+            
             .padding()
             .navigationTitle("Home")
         }
