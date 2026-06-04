@@ -15,7 +15,7 @@ struct HistoryView: View {
                 .font(.largeTitle)
             
             Button("Go to Settings") {
-                router.replace(with: .settings(.main))
+                router.replace(with: .settings(.account))
             }
         }
     }
