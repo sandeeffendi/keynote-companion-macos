@@ -5,38 +5,38 @@
 //  Created by Sande Effendi on 05/06/26.
 //
 
-import Foundation
+import AppKit
 import SwiftUI
 
-struct GlassPanelView<Content: View>: View {
-    private let content: Content
+struct TrafficLightControlsView: View {
+    var body: some View {
+        HStack(spacing: AppSpacing.sm) {
+            trafficButton(color: AppColor.trafficClose) {
+                NSApp.keyWindow?.close()
+            }
 
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
+            trafficButton(color: AppColor.trafficMinimize) {
+                NSApp.keyWindow?.miniaturize(nil)
+            }
+
+            trafficButton(color: AppColor.trafficZoom) {
+                NSApp.keyWindow?.zoom(nil)
+            }
+        }
     }
 
-    var body: some View {
-        GlassEffectContainer(spacing: AppSpacing.lg) {
-            content
+    private func trafficButton(
+        color: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Circle()
+                .fill(color)
                 .frame(
-                    width: AppSize.homeWindowWidth,
-                    height: AppSize.homeWindowHeight
+                    width: AppSize.trafficLightSize,
+                    height: AppSize.trafficLightSize
                 )
-                .glassEffect(
-                    .regular,
-                    in: RoundedRectangle(
-                        cornerRadius: AppRadius.window,
-                        style: .continuous
-                    )
-                )
-                .overlay {
-                    RoundedRectangle(
-                        cornerRadius: AppRadius.window,
-                        style: .continuous
-                    )
-                    .stroke(AppColor.borderSubtle, lineWidth: 1)
-                }
-                .shadow(color: AppColor.shadow, radius: 28, x: 0, y: 18)
         }
+        .buttonStyle(.plain)
     }
 }
