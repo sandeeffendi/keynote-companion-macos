@@ -9,6 +9,6 @@ import Foundation
 import SwiftUI
 
 // PIC: arfian
-enum AppIcon {
+enum AppColor {
 
 }
