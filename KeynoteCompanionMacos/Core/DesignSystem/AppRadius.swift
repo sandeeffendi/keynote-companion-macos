@@ -8,6 +8,11 @@
 import Foundation
 
 // PIC: Dina
-enum AppRadius {
-
+extension CGFloat {
+    // Buttons
+    static let btnCircle: CGFloat = 999
+    static let btnNonCircle: CGFloat = 12
+    
+    // Card
+    static let card: CGFloat = 16
 }
