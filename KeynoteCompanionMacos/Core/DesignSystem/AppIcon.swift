@@ -5,7 +5,7 @@
 //  Created by Sande Effendi on 05/06/26.
 //
 
-enum DSIcon {
+enum AppIcon {
     static let permissionMissing = "mic.slash"
     static let noKeynoteFileOpen = "exclamationmark"
     static let noKeynoteSlideshowActive = "pause.fill"

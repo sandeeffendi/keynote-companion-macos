@@ -21,9 +21,11 @@ enum AppColor {
     static let controlTextDisabled = Color.black.opacity(0.28)
 
     static let borderSubtle = Color.white.opacity(0.28)
+    static let separator = Color.black.opacity(0.12)
     static let shadow = Color.black.opacity(0.14)
 
     static let trafficClose = Color(red: 1.00, green: 0.37, blue: 0.34)
     static let trafficMinimize = Color(red: 1.00, green: 0.75, blue: 0.18)
     static let trafficZoom = Color(red: 0.20, green: 0.80, blue: 0.34)
+    static let trafficSymbol = Color.black.opacity(0.58)
 }
