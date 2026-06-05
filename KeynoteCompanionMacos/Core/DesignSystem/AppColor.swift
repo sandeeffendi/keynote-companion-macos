@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 // PIC: arfian
-enum AppColor {
-
+extension AppColor {
+    static let primaryColor = Color("#9678EB") // HEX placeholder
+    static let secondaryColor = Color(red: 38/255, green: 38/255, blue: 38/255) // RGB placeholder
 }
