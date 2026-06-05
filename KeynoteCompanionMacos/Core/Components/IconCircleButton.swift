@@ -5,38 +5,24 @@
 //  Created by Sande Effendi on 05/06/26.
 //
 
-import AppKit
 import SwiftUI
 
-struct TrafficLightControlsView: View {
+struct IconCircleButton: View {
+    let systemName: String
+    let action: () -> Void
+
     var body: some View {
-        HStack(spacing: AppSpacing.sm) {
-            trafficButton(color: AppColor.trafficClose) {
-                NSApp.keyWindow?.close()
-            }
-
-            trafficButton(color: AppColor.trafficMinimize) {
-                NSApp.keyWindow?.miniaturize(nil)
-            }
-
-            trafficButton(color: AppColor.trafficZoom) {
-                NSApp.keyWindow?.zoom(nil)
-            }
-        }
-    }
-
-    private func trafficButton(
-        color: Color,
-        action: @escaping () -> Void
-    ) -> some View {
         Button(action: action) {
-            Circle()
-                .fill(color)
+            Image(systemName: systemName)
+                .font(AppFont.smallIcon)
+                .foregroundStyle(AppColor.iconSecondary)
                 .frame(
-                    width: AppSize.trafficLightSize,
-                    height: AppSize.trafficLightSize
+                    width: AppSize.headerIconButtonSize,
+                    height: AppSize.headerIconButtonSize
                 )
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Circle())
     }
 }

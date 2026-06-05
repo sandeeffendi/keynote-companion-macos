@@ -7,4 +7,5 @@
 
 struct ExampleComponent {
     // ini adalah placeholder component
+
 }
