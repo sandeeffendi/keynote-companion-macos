@@ -31,7 +31,8 @@ struct RecapView: View {
             // back button
             Button("Back") {
                 route.pop()
-            }
+            }.cornerRadius(.btnCircle)
         }
     }
 }
+
