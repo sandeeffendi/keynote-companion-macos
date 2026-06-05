@@ -9,11 +9,11 @@ import Foundation
 
 // PIC: fajar
 enum AppSpacing {
-    static let tight: CGFloat = 4
-    static let cozy: CGFloat = 8
-    static let comfortable: CGFloat = 12
-    static let roomy: CGFloat = 16
-    static let spacious: CGFloat = 24
-    static let generous: CGFloat = 32
-    static let expansive: CGFloat = 36
+    static let xxs: CGFloat = 2
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
 }
