@@ -10,9 +10,9 @@ import Foundation
 // PIC: Dina
 extension CGFloat {
     // Buttons
-    static let btnCircle: CGFloat = 999
-    static let btnNonCircle: CGFloat = 12
+    static let btnCircle: CGFloat = 100
+    static let btnNonCircle: CGFloat = 24
     
     // Card
-    static let card: CGFloat = 16
+    static let card: CGFloat = 8
 }
