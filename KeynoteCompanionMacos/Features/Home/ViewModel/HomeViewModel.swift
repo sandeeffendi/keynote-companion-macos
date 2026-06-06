@@ -3,7 +3,6 @@
 //  KeynoteCompanionMacos
 //
 
-import Foundation
 import Combine
 
 final class HomeViewModel: ObservableObject {
@@ -13,27 +12,13 @@ final class HomeViewModel: ObservableObject {
         self.state = state
     }
 
-    func loadData() {
-        print("HomeViewModel.loadData")
-    }
+    func showHelp() {}
 
-    func showHelp() {
-        print("HomeViewModel.showHelp")
-    }
+    func openSettings() {}
 
-    func openSettings() {
-        print("HomeViewModel.openSettings")
-    }
+    func showActivities() {}
 
-    func showActivities() {
-        print("HomeViewModel.showActivities")
-    }
+    func openKeynoteFile() {}
 
-    func openKeynoteFile() {
-        print("HomeViewModel.openKeynoteFile")
-    }
-
-    func recordPractice() {
-        print("HomeViewModel.recordPractice")
-    }
+    func recordPractice() {}
 }
