@@ -76,6 +76,8 @@ struct RecapView: View {
                 }.background(.cBtnSecondary).clipShape(Circle())
                 Spacer()
                 Button{
+                    route.pop()
+                    route.push(.home(.main))
                 }label: {
                     HStack{
                         Text("Record New Practice")

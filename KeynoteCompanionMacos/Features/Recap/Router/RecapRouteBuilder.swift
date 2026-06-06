@@ -14,6 +14,8 @@ struct RecapRouteBuilder {
         switch route {
         case .main:
             RecapView(viewModel: RecapViewModel())
+        case .home:
+            HomeView(viewModel: HomeViewModel())
 
         }
 

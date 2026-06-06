@@ -9,4 +9,5 @@ import Foundation
 
 enum RecapRoute: Hashable {
     case main
+    case home
 }
