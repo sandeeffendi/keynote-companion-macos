@@ -16,4 +16,8 @@ enum AppIcon {
     static let settings = "gearshape"
     static let activities = "clock.arrow.circlepath"
     static let record = "record.circle"
+    
+    static let permissionMicrophone = "microphone"
+    static let permissionScreen = "tv"
+    static let permissionWPMDetector = "waveform.badge.microphone"
 }

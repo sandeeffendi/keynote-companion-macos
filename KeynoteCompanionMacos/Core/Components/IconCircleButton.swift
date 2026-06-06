@@ -2,13 +2,12 @@
 //  IconCircleButton.swift
 //  KeynoteCompanionMacos
 //
-//  Created by Sande Effendi on 05/06/26.
-//
 
 import SwiftUI
 
 struct IconCircleButton: View {
     let systemName: String
+    var size: CGFloat = AppSize.headerIconButtonSize
     let action: () -> Void
 
     var body: some View {
@@ -16,10 +15,7 @@ struct IconCircleButton: View {
             Image(systemName: systemName)
                 .font(AppFont.smallIcon)
                 .foregroundStyle(AppColor.iconSecondary)
-                .frame(
-                    width: AppSize.headerIconButtonSize,
-                    height: AppSize.headerIconButtonSize
-                )
+                .frame(width: size, height: size)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
