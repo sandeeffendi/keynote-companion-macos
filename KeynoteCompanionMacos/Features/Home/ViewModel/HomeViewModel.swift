@@ -3,7 +3,6 @@
 //  KeynoteCompanionMacos
 //
 
-import Foundation
 import Combine
 import Foundation
 
@@ -300,4 +299,14 @@ final class HomeViewModel: ObservableObject {
         state = status.visibleState(preserving: state)
         self.errorMessage = status.isTechnicalFailure ? errorMessage : nil
     }
+
+    func showHelp() {}
+
+    func openSettings() {}
+
+    func showActivities() {}
+
+    func openKeynoteFile() {}
+
+    func recordPractice() {}
 }

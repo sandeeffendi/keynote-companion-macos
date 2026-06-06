@@ -37,6 +37,7 @@ struct RootView: View {
 
             restartSplash()
         }
+        .background(Color.clear)
     }
 
     private var windowWidth: CGFloat {
