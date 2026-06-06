@@ -17,4 +17,13 @@ final class AppRouter: ObservableObject {
         guard !path.isEmpty else { return }
         path.removeLast()
     }
+
+    func popToRoot() {
+        path.removeLast(path.count)
+    }
+
+    func replace(with route: AppRoute) {
+        path.removeLast(path.count)
+        path.append(route)
+    }
 }
