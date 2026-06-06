@@ -10,13 +10,13 @@ import SwiftUI
 extension PermissionItem {
     static let microphone = PermissionItem(
         icon: AppIcon.permissionMicrophone,
-        title: "Allow access to your microphone",
-        description: "This allows you to record your voice for the presentation"
+        title: "Allow Microphone Access",
+        description: "For recording your sound"
     )
 
     static let screen = PermissionItem(
         icon: AppIcon.permissionScreen,
-        title: "Allow screen acces",
+        title: "Allow Screen Access",
         description: "For detecting your keynote slideshow mode"
     )
 

@@ -33,3 +33,10 @@ struct WindowHeaderView<TrailingAccessory: View>: View {
         .frame(height: AppSize.headerHeight)
     }
 }
+
+extension WindowHeaderView where TrailingAccessory == EmptyView {
+    init(title: String) {
+        self.title = title
+        self.trailingAccessory = EmptyView()
+    }
+}
