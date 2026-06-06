@@ -6,6 +6,13 @@
 import Foundation
 
 struct SettingsModel {
+    var permissionItems: [PermissionItem]
+}
+
+struct PermissionItem: Identifiable {
+    let id = UUID()
+    let icon: String
     let title: String
-    let subTitle: String
+    let description: String
+    var isEnabled: Bool = false
 }

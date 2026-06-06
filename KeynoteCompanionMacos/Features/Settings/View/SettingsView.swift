@@ -16,23 +16,45 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .center, spacing: 16) {
-            //title
-            Text(viewModel.settingData.title)
-                .font(.largeTitle)
+        VStack(alignment: .center) {
+            
+            VStack(alignment: .leading) {
+                Button {
+                    router.popToRoot()
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.nativeCircle)
+                
+                Text("Settings")
+                    .font(AppFont.settingHead)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Spacer(minLength: 0)
 
-            //subtitle
-            Text(viewModel.settingData.subTitle)
-                .font(.title).bold()
-
-            // back button
-            Button("Back") {
-                router.pop()
+            List {
+                ForEach($viewModel.settingsData.permissionItems) { $permissionItems in
+                    ListPermission(
+                        icon: permissionItems.icon,
+                        title: permissionItems.title,
+                        description: permissionItems.description,
+                        isOn: $permissionItems.isEnabled
+                    )
+                }
             }
 
         }
-        .padding()
-        .navigationTitle("Settings")
+        .frame(
+            maxWidth: AppSize.homeWindowWidth,
+               maxHeight: AppSize.homeWindowHeight
+        )
+        .background(Color.clear)
+        .padding(AppSpacing.xl)
         .navigationBarBackButtonHidden(true)
     }
+}
+
+#Preview {
+    SettingsView(viewModel: SettingsViewModel())
 }
