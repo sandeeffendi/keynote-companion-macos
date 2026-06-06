@@ -15,6 +15,8 @@ extension CGFloat {
 
     // Card
     static let card: CGFloat = 8
+    
+    static let bgFeedback: CGFloat = 16
 }
 
 // App size token
