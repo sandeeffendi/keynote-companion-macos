@@ -28,5 +28,17 @@ struct HomeView: View {
         }
         .padding()
         .navigationTitle("Home")
+        .background(
+            WindowAccessor { window in
+
+                guard let window else {
+                    return
+                }
+
+                WindowManager.shared
+                    .configureMainWindow(window)
+            }
+        )
     }
 }
+

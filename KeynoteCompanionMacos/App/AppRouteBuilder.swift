@@ -9,6 +9,9 @@ struct AppRouteBuilder {
     @ViewBuilder
     static func build(_ route: AppRoute) -> some View {
         switch route {
+        case .loadingScreen(let loadingRoute):
+                   LoadingScreenRouteBuilder.build(loadingRoute)
+            
         case .home(let homeRoute):
             HomeRouteBuilder.build(homeRoute)
 

@@ -10,8 +10,10 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $router.path) {
-            HomeRouteBuilder.build(.main)
-                .navigationDestination(for: AppRoute.self) { route in
+            LoadingScreenRouteBuilder.build(.main)
+                .navigationDestination(
+                    for: AppRoute.self
+                ) { route in
                     AppRouteBuilder.build(route)
                 }
         }
