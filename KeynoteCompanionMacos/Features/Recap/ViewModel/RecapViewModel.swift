@@ -40,6 +40,7 @@ final class RecapViewModel: ObservableObject {
     }
     
     func saveRecap(context: ModelContext) {
+        print("saving recap...")
         let recap = HistoryModel(
             sesTitle: recapData.sesTitle,
             sesKeynote: recapData.sesKeynote,
@@ -59,5 +60,6 @@ final class RecapViewModel: ObservableObject {
         )
         context.insert(recap)
         try? context.save()
+        print("saved: \(recap.sesTitle)")
     }
 }

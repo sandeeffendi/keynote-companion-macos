@@ -7,6 +7,7 @@
 
 import SwiftUI
 import TipKit
+import SwiftData
 
 @main
 struct KeynoteCompanionMacosApp: App {
@@ -21,6 +22,7 @@ struct KeynoteCompanionMacosApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(router)
+                .modelContainer(for: HistoryModel.self) 
         }
     }
 }

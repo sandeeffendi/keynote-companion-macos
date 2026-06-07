@@ -17,6 +17,7 @@ struct RecapView: View {
     @Environment(\.modelContext) private var modelContext
     let saveTip = SaveSessionTip()
     let newTip = NewSessionTip()
+    @State var saveToHistory: Bool = false
     
     init(viewModel: RecapViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -49,8 +50,11 @@ struct RecapView: View {
         //footer
         HStack{
             Button{
+                guard !saveToHistory else { return }
+                viewModel.saveRecap(context: modelContext)
+                saveToHistory = true
             } label: {
-                Image(systemName: "bookmark")
+                Image(systemName: saveToHistory ? "bookmark.fill" : "bookmark" )
                     .font(.system(size: 24)).frame(width: 48, height: 48)
             }.background(.cBtnSecondary).clipShape(Circle()).popoverTip(saveTip) { action in
                 

@@ -19,7 +19,7 @@ struct HomeView: View {
                 .font(.largeTitle)
 
             Button("Go to Settings") {
-                router.push(.settings(.main))
+                router.push(.history(.main))
             }
 
             Button("Go to Recap Screen") {
