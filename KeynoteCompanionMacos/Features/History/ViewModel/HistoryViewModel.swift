@@ -6,3 +6,9 @@
 //
 
 import Foundation
+import Combine
+import SwiftData
+
+final class HistoryViewModel: ObservableObject {
+    
+}

@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+enum HistoryRoute: Hashable {
+    case main
+    case home
+}
