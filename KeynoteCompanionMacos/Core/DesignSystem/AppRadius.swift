@@ -7,7 +7,7 @@
 
 import Foundation
 
-// PIC: Dina
+//Dina
 extension CGFloat {
     // Buttons
     static let btnCircle: CGFloat = 100
@@ -15,10 +15,10 @@ extension CGFloat {
 
     // Card
     static let card: CGFloat = 8
-    
     static let bgFeedback: CGFloat = 16
 }
 
+//sande
 // App size token
 enum AppSize {
     static let homeWindowWidth: CGFloat = 560
