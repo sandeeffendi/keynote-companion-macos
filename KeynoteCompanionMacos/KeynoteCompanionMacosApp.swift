@@ -15,6 +15,7 @@ struct KeynoteCompanionMacosApp: App {
     init() {
         try? Tips.resetDatastore()
         try? Tips.configure()
+        NSApplication.shared.appearance = NSAppearance(named: .aqua)
     }
     
     var body: some Scene {
