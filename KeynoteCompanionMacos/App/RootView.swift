@@ -15,5 +15,6 @@ struct RootView: View {
                     AppRouteBuilder.build(route)
                 }
         }
+        .background(Color.clear)
     }
 }

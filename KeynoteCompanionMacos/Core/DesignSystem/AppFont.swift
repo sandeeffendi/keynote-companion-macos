@@ -20,6 +20,10 @@ enum AppFont {
 
     static let icon = Font.system(size: 28, weight: .medium, design: .default)
     static let smallIcon = Font.system(size: 13, weight: .medium, design: .default)
+    static let trafficLightSymbol = Font.system(size: 7, weight: .bold, design: .default)
+
+    static let settingHead = Font.system(size: 26, weight: .bold, design: .default)
+    static let settingTitle = Font.system(size: 17, weight: .regular, design: .default)
+    static let settingDescription = Font.system(size: 15, weight: .regular, design: .default)
+    static let sizeIcon = Font.system(size: 22, weight: .regular, design: .default)
 }
-
-
