@@ -230,8 +230,37 @@ struct SettingsView_Previews: PreviewProvider {
         }
     }
 
+#if DEBUG
+    private var resetOnboardingButton: some View {
+        Button(action: resetOnboarding) {
+            Text("Reset Onboarding")
+                .lineLimit(1)
+        }
+        .buttonStyle(.plain)
+        .font(AppFont.button)
+        .foregroundStyle(AppColor.controlTextPrimary)
+        .padding(.horizontal, AppSpacing.md)
+        .frame(height: Metrics.resetOnboardingButtonHeight)
+        .contentShape(Capsule())
+        .glassEffect(
+            onboardingViewModel.hasCompletedOnboarding
+                ? .regular.interactive() : .regular,
+            in: Capsule()
+        )
+        .disabled(!onboardingViewModel.hasCompletedOnboarding)
+        .opacity(onboardingViewModel.hasCompletedOnboarding ? 1 : 0.48)
+        .accessibilityLabel("Reset onboarding")
+    }
+
+    private func resetOnboarding() {
+        onboardingViewModel.resetOnboarding()
+        router.requestSplashRestart()
+    }
+#endif
+
     private enum Metrics {
         static let backButtonSize: CGFloat = 36
+        static let resetOnboardingButtonHeight: CGFloat = 32
     }
 }
 
