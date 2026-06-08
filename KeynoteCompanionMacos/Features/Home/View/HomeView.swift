@@ -14,31 +14,45 @@ struct HomeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text(viewModel.title)
-                .font(.largeTitle)
-
-            Button("Go to Settings") {
-                router.push(.settings(.main))
+        VStack(spacing: 0) {
+            HomeHeaderView {
+                viewModel.showHelp()
             }
 
-            Button("Go to Recap Screen") {
-                router.push(.recap(.main))
-            }
+            Spacer(minLength: 0)
+
+            HomeStatusContentView(
+                state: viewModel.state,
+                onOpenKeynoteFileTapped: viewModel.openKeynoteFile
+            )
+
+            Spacer(minLength: 0)
+
+            HomeFooterView(
+                isRecordEnabled: viewModel.state.isRecordEnabled,
+                onOpenSettingsTapped: openSettings,
+                onActivitiesTapped: showActivities,
+                onRecordPracticeTapped: viewModel.recordPractice
+            )
         }
-        .padding()
-        .navigationTitle("Home")
-        .background(
-            WindowAccessor { window in
-
-                guard let window else {
-                    return
-                }
-
-                WindowManager.shared
-                    .configureMainWindow(window)
-            }
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.top, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.xl)
+        .frame(
+            width: AppSize.homeWindowWidth,
+            height: AppSize.homeWindowHeight
         )
+        .background(Color.clear)
+    }
+
+    private func openSettings() {
+        viewModel.openSettings()
+        router.push(.settings(.main))
+    }
+
+    private func showActivities() {
+        viewModel.showActivities()
+        router.push(.recap(.main))
     }
 }
 

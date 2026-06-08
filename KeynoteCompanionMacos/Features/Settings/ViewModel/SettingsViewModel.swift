@@ -8,15 +8,19 @@ import Foundation
 
 final class SettingsViewModel: ObservableObject {
 
-    @Published var settingData: SettingsModel
+    @Published var settingsData: SettingsModel
 
     init(
-        settingData: SettingsModel = SettingsModel(
-            title: "Ini adalah setting screen",
-            subTitle: "PIC: Arfian"
+        settingsData: SettingsModel =
+        SettingsModel (
+            permissionItems: [
+                .microphone,
+                .screen,
+                .wpmDetector
+            ]
         )
     ) {
-        self.settingData = settingData
+        self.settingsData = settingsData
     }
 
     func loadSettings() {
