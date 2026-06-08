@@ -46,6 +46,12 @@ struct SettingsView: View {
         )
         .background(Color.clear)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            viewModel.refreshAllPermissionStatuses()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            viewModel.refreshAllPermissionStatuses()
+        }
     }
 
     private var permissionsList: some View {
@@ -66,8 +72,14 @@ struct SettingsView: View {
                         isHighlighted: false,
                         showsSeparator: index < viewModel.settingsData
                             .permissionItems.count - 1,
-                        isOn: $viewModel.settingsData.permissionItems[index]
-                            .isEnabled
+                        isOn: Binding(
+                            get: {
+                                viewModel.settingsData.permissionItems[index].isEnabled
+                            },
+                            set: { newValue in
+                                viewModel.togglePermission(at: index, newValue: newValue)
+                            }
+                        )
                     )
                 }
             }

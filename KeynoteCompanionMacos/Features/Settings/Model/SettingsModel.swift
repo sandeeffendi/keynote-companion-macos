@@ -15,4 +15,5 @@ struct PermissionItem: Identifiable {
     let title: String
     let description: String
     var isEnabled: Bool = false
+    var permissionType: PermissionType
 }
