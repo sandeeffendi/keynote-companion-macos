@@ -9,60 +9,95 @@ import Foundation
 import SwiftData
 
 @Model
-class HistoryModel{
+class HistoryModel {
     var sesTitle: String
     var sesKeynote: String
     var date: String
     var time: String
     var duration: String
 
-    var wpmOverall: Int
-    var wpmHighest: Int
-    var wpmLowest: Int
-    var wpmHighestSlides: Int
-    var wpmLowestSlides: Int
+    @Relationship(deleteRule: .cascade)
+    var feedbacks: [HistoryFeedback]
 
-    var fillerOverall: Int
-    var fillerHighest: Int
-    var fillerLowest: Int
-    var fillerHighestSlides: Int
-    var fillerLowestSlides: Int
-    
     init(
         sesTitle: String,
         sesKeynote: String,
         date: String,
         time: String,
         duration: String,
-        wpmOverall: Int,
-        wpmHighest: Int,
-        wpmLowest: Int,
-        wpmHighestSlides: Int,
-        wpmLowestSlides: Int,
-        fillerOverall: Int,
-        fillerHighest: Int,
-        fillerLowest: Int,
-        fillerHighestSlides: Int,
-        fillerLowestSlides: Int
-    )
-    {
+        feedbacks: [HistoryFeedback] = []
+    ) {
         self.sesTitle = sesTitle
         self.sesKeynote = sesKeynote
         self.date = date
         self.time = time
         self.duration = duration
-        self.wpmOverall = wpmOverall
-        self.wpmHighest = wpmHighest
-        self.wpmLowest = wpmLowest
-        self.wpmHighestSlides = wpmHighestSlides
-        self.wpmLowestSlides = wpmLowestSlides
-        self.fillerOverall = fillerOverall
-        self.fillerHighest = fillerHighest
-        self.fillerLowest = fillerLowest
-        self.fillerHighestSlides = fillerHighestSlides
-        self.fillerLowestSlides = fillerHighestSlides
+        self.feedbacks = feedbacks
+    }
+
+    func toRecapModel() -> RecapModel {
+        RecapModel(
+            sesTitle: sesTitle,
+            sesKeynote: sesKeynote,
+            date: date,
+            time: time,
+            duration: duration,
+            feedback: feedbacks.map { $0.toFeedback() }
+        )
     }
 }
 
+@Model
+class HistoryFeedback {
+    var title: String
+    var overall: Int
+    var unit: String
+    var tips: String
+    var subTitle: String
+    var category: String
+    var perSlideJSON: String
 
+    init(
+        title: String,
+        overall: Int,
+        unit: String,
+        tips: String,
+        subTitle: String,
+        category: String,
+        perSlide: [Slide]
+    ) {
+        self.title = title
+        self.overall = overall
+        self.unit = unit
+        self.tips = tips
+        self.subTitle = subTitle
+        self.category = category
+        self.perSlideJSON = HistoryFeedback.encode(perSlide)
+    }
 
+    func toFeedback() -> Feedback {
+        Feedback(
+            title: title,
+            overall: overall,
+            unit: unit,
+            tips: tips,
+            subTitle: subTitle,
+            category: category,
+            perSlide: HistoryFeedback.decode(perSlideJSON)
+        )
+    }
+
+    private static func encode(_ slides: [Slide]) -> String {
+        guard let data = try? JSONEncoder().encode(slides),
+              let string = String(data: data, encoding: .utf8)
+        else { return "[]" }
+        return string
+    }
+
+    private static func decode(_ json: String) -> [Slide] {
+        guard let data = json.data(using: .utf8),
+              let slides = try? JSONDecoder().decode([Slide].self, from: data)
+        else { return [] }
+        return slides
+    }
+}
