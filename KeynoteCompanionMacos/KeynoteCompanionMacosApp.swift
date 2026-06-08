@@ -18,15 +18,13 @@ struct KeynoteCompanionMacosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppWindowSurface {
-                RootView()
-                    .environmentObject(router)
-            }
-            .preferredColorScheme(.light)
+            RootView()
+                .environmentObject(router)
+                .preferredColorScheme(.light)
         }
         .defaultSize(
-            width: AppSize.homeWindowWidth,
-            height: AppSize.homeWindowHeight
+            width: AppSize.splashWindowWidth,
+            height: AppSize.splashWindowHeight
         )
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

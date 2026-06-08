@@ -19,6 +19,9 @@ extension CGFloat {
 
 // App size token
 enum AppSize {
+    static let splashWindowWidth: CGFloat = 300
+    static let splashWindowHeight: CGFloat = 400
+
     static let homeWindowWidth: CGFloat = 560
     static let homeWindowHeight: CGFloat = 374
 

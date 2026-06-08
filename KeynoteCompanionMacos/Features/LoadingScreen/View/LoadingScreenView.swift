@@ -9,74 +9,59 @@ import SwiftUI
 
 struct LoadingScreenView: View {
 
-    @EnvironmentObject private var router: AppRouter
-
-    @StateObject private var viewModel: LoadingScreenViewModel
-
-    init(viewModel: LoadingScreenViewModel) {
-        _viewModel = StateObject(
-            wrappedValue: viewModel
-        )
-    }
+    let onFinished: @MainActor () -> Void
 
     var body: some View {
 
-        GeometryReader { geometry in
+        ZStack {
 
-            ZStack {
+            Text("TIEMPO.")
+                .font(
+                    .system(
+                        size: 25,
+                        weight: .semibold
+                    )
+                )
+                .foregroundStyle(AppColor.textPrimary)
+                .tracking(6)
+                .accessibilityLabel("Tiempo")
 
-                Text("TIEMPO.")
-                    .font(
-                        .system(
-                            size: 25,
-                            weight: .semibold
-                        )
-                    )
-                    .tracking(6)
-                    .position(
-                        x: geometry.size.width / 2,
-                        y: geometry.size.height / 2
-                    )
-
-                ProgressView()
-                    .controlSize(.small)
-                    .scaleEffect(1.5)
-                    .position(
-                        x: geometry.size.width / 2,
-                        y: geometry.size.height * 0.75
-                    )
-            }
+            ProgressView()
+                .controlSize(.small)
+                .scaleEffect(1.5)
+                .offset(y: AppSize.splashWindowHeight * 0.25)
+                .accessibilityLabel("Loading Tiempo")
         }
         .frame(
-            width: 300,
-            height: 400
+            width: AppSize.splashWindowWidth,
+            height: AppSize.splashWindowHeight
         )
-        .background(
-            WindowAccessor { window in
+        .task {
+            do {
+                try await Task.sleep(
+                    for: .seconds(3)
+                )
 
-                guard let window else {
+                guard !Task.isCancelled else {
                     return
                 }
 
-                WindowManager.shared
-                    .configureSplashWindow(window)
+                await MainActor.run {
+                    onFinished()
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                return
             }
-        )
-        .task {
-
-            try? await Task.sleep(
-                for: .seconds(3)
-            )
-
-            router.replace(
-                with: .home(.main)
-            )
         }
     }
 }
 
-#Preview {
-    LoadingScreenView(
-        viewModel: LoadingScreenViewModel()
-    )
+struct LoadingScreenView_Previews: PreviewProvider {
+    static var previews: some View {
+        LoadingScreenView(
+            onFinished: {}
+        )
+    }
 }

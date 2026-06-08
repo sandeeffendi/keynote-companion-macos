@@ -7,16 +7,49 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
+    @State private var isShowingSplash = true
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            LoadingScreenRouteBuilder.build(.main)
-                .navigationDestination(
-                    for: AppRoute.self
-                ) { route in
-                    AppRouteBuilder.build(route)
+        AppWindowSurface(
+            width: windowWidth,
+            height: windowHeight
+        ) {
+            if isShowingSplash {
+                LoadingScreenView(
+                    onFinished: showHome
+                )
+            } else {
+                NavigationStack(path: $router.path) {
+                    HomeRouteBuilder.build(.main)
+                        .navigationDestination(
+                            for: AppRoute.self
+                        ) { route in
+                            AppRouteBuilder.build(route)
+                        }
                 }
+            }
         }
-        .background(Color.clear)
+    }
+
+    private var windowWidth: CGFloat {
+        isShowingSplash
+            ? AppSize.splashWindowWidth
+            : AppSize.homeWindowWidth
+    }
+
+    private var windowHeight: CGFloat {
+        isShowingSplash
+            ? AppSize.splashWindowHeight
+            : AppSize.homeWindowHeight
+    }
+
+    @MainActor
+    private func showHome() {
+        guard isShowingSplash else {
+            return
+        }
+
+        router.popToRoot()
+        isShowingSplash = false
     }
 }

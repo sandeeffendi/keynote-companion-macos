@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct AppWindowSurface<Content: View>: View {
+    private let width: CGFloat
+    private let height: CGFloat
     private let content: Content
 
     private var windowShape: RoundedRectangle {
@@ -15,7 +17,13 @@ struct AppWindowSurface<Content: View>: View {
         )
     }
 
-    init(@ViewBuilder content: () -> Content) {
+    init(
+        width: CGFloat,
+        height: CGFloat,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.width = width
+        self.height = height
         self.content = content()
     }
 
@@ -23,8 +31,8 @@ struct AppWindowSurface<Content: View>: View {
         GlassEffectContainer(spacing: 0) {
             content
                 .frame(
-                    width: AppSize.homeWindowWidth,
-                    height: AppSize.homeWindowHeight
+                    width: width,
+                    height: height
                 )
                 .background(Color.clear)
                 .glassEffect(.regular, in: windowShape)
@@ -36,8 +44,8 @@ struct AppWindowSurface<Content: View>: View {
                 .shadow(color: AppColor.shadow, radius: 28, x: 0, y: 18)
         }
         .frame(
-            width: AppSize.homeWindowWidth,
-            height: AppSize.homeWindowHeight
+            width: width,
+            height: height
         )
         .background(AppWindowConfigurator())
         .containerBackground(.clear, for: .window)

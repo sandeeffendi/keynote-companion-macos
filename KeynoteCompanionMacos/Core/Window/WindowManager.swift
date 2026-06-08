@@ -32,8 +32,8 @@ final class WindowManager {
 
         window.setContentSize(
             NSSize(
-                width: 300,
-                height: 400
+                width: AppSize.splashWindowWidth,
+                height: AppSize.splashWindowHeight
             )
         )
     }
@@ -56,8 +56,8 @@ final class WindowManager {
 
         window.setContentSize(
             NSSize(
-                width: 1000,
-                height: 700
+                width: AppSize.homeWindowWidth,
+                height: AppSize.homeWindowHeight
             )
         )
     }
