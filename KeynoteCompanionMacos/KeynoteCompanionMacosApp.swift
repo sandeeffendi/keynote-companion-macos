@@ -23,6 +23,13 @@ struct KeynoteCompanionMacosApp: App {
             RootView()
                 .environmentObject(router)
                 .modelContainer(for: HistoryModel.self)
+                .preferredColorScheme(.light)
         }
+        .defaultSize(
+            width: AppSize.splashWindowWidth,
+            height: AppSize.splashWindowHeight
+        )
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
     }
 }

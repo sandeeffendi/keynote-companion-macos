@@ -33,7 +33,7 @@ extension HomeViewState {
         switch self {
         case .permissionMissing:
             return
-                "Allow microphone and screen access to record your voice and detect your Keynote slideshow"
+                "Allow microphone and Keynote Automation access to record your voice and detect your slideshow"
         case .noKeynoteFileOpen:
             return "Open a keynote file that you want to present"
         case .noKeynoteSlideshowActive:
@@ -49,8 +49,10 @@ extension HomeViewState {
             return AppIcon.permissionMissing
         case .keynoteSlideshowActive:
             return AppIcon.keynoteSlideshowActive
-        case .noKeynoteFileOpen, .noKeynoteSlideshowActive:
-            return nil
+        case .noKeynoteFileOpen:
+            return AppIcon.noKeynoteFileOpen
+        case .noKeynoteSlideshowActive:
+            return AppIcon.noKeynoteSlideshowActive
         }
     }
 

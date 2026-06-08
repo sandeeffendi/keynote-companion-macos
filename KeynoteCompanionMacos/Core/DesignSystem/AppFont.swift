@@ -26,4 +26,10 @@ enum AppFont {
     static let settingTitle = Font.system(size: 17, weight: .regular, design: .default)
     static let settingDescription = Font.system(size: 15, weight: .regular, design: .default)
     static let sizeIcon = Font.system(size: 22, weight: .regular, design: .default)
+
+    static let onboardingLogo = Font.system(size: 27, weight: .semibold, design: .default)
+    static let onboardingTitle = Font.system(size: 22, weight: .bold, design: .default)
+    static let onboardingSubtitle = Font.system(size: 16, weight: .regular, design: .default)
+    static let onboardingFeatureTitle = Font.system(size: 16, weight: .bold, design: .default)
+    static let onboardingFeatureDescription = Font.system(size: 15, weight: .regular, design: .default)
 }

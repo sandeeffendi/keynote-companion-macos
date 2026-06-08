@@ -20,6 +20,9 @@ struct AppRouteBuilder {
             
         case .history(let historyRoute):
             HistoryRouteBuilder.build(historyRoute)
+
+        case .onboarding(let onboardingRouter):
+            OnboardingRouteBuilder.build(onboardingRouter)
         }
 
     }

@@ -14,9 +14,18 @@ struct HomeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text(viewModel.title)
-                .font(.largeTitle)
+        VStack(spacing: 0) {
+            HomeHeaderView {
+                viewModel.showHelp()
+            }
+
+            Spacer(minLength: 0)
+
+            HomeStatusContentView(
+                state: viewModel.state,
+                errorMessage: viewModel.errorMessage,
+                onOpenKeynoteFileTapped: viewModel.openKeynoteFile
+            )
 
             Button("Go to Settings") {
                 router.push(.history(.main))
@@ -26,7 +35,26 @@ struct HomeView: View {
                 router.push(.recap(.main))
             }
         }
-        .padding()
-        .navigationTitle("Home")
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.top, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.xl)
+        .frame(
+            width: AppSize.homeWindowWidth,
+            height: AppSize.homeWindowHeight
+        )
+        .background(Color.clear)
+        .task {
+            await viewModel.observeSession()
+        }
+    }
+
+    private func openSettings() {
+        viewModel.openSettings()
+        router.push(.settings(.main))
+    }
+
+    private func showActivities() {
+        viewModel.showActivities()
+        router.push(.recap(.main))
     }
 }

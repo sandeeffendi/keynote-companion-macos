@@ -7,14 +7,91 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
+    @StateObject private var onboardingViewModel = OnboardingViewModel()
+    @State private var isShowingSplash = true
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            HomeRouteBuilder.build(.main)
-                .navigationDestination(for: AppRoute.self) { route in
-                    AppRouteBuilder.build(route)
+        AppWindowSurface(
+            width: windowWidth,
+            height: windowHeight
+        ) {
+            if isShowingSplash {
+                LoadingScreenView(
+                    onFinished: showHome
+                )
+            } else {
+                NavigationStack(path: $router.path) {
+                    HomeRouteBuilder.build(.main)
+                        .navigationDestination(
+                            for: AppRoute.self
+                        ) { route in
+                            AppRouteBuilder.build(route)
+                        }
                 }
+            }
         }
-        .background(Color.clear)
+        .onChange(of: router.shouldRestartSplash) { _, shouldRestartSplash in
+            guard shouldRestartSplash else {
+                return
+            }
+
+            restartSplash()
+        }
+    }
+
+    private var windowWidth: CGFloat {
+        if isShowingSplash {
+            return AppSize.splashWindowWidth
+        }
+
+        if isShowingOnboarding {
+            return AppSize.onboardingWindowWidth
+        }
+
+        return AppSize.homeWindowWidth
+    }
+
+    private var windowHeight: CGFloat {
+        if isShowingSplash {
+            return AppSize.splashWindowHeight
+        }
+
+        if isShowingOnboarding {
+            return AppSize.onboardingWindowHeight
+        }
+
+        return AppSize.homeWindowHeight
+    }
+
+    private var isShowingOnboarding: Bool {
+        if case .onboarding = router.activeRoute {
+            return true
+        }
+
+        return false
+    }
+
+    @MainActor
+    private func showHome() {
+        guard isShowingSplash else {
+            return
+        }
+
+        onboardingViewModel.loadCompletionState()
+
+        if onboardingViewModel.hasCompletedOnboarding {
+            router.popToRoot()
+        } else {
+            router.replace(with: .onboarding(.main))
+        }
+
+        isShowingSplash = false
+    }
+
+    @MainActor
+    private func restartSplash() {
+        router.popToRoot()
+        isShowingSplash = true
+        router.consumeSplashRestartRequest()
     }
 }
