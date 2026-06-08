@@ -9,8 +9,7 @@ struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: SettingsViewModel
 #if DEBUG
-    @AppStorage(OnboardingDefaults.hasCompletedOnboardingKey)
-    private var hasCompletedOnboarding = false
+    @StateObject private var onboardingViewModel = OnboardingViewModel()
 #endif
 
     init(viewModel: SettingsViewModel) {
@@ -90,21 +89,27 @@ struct SettingsView: View {
     private var resetOnboardingButton: some View {
         Button(action: resetOnboarding) {
             Text("Reset Onboarding")
-                .font(AppFont.button)
-                .foregroundStyle(AppColor.controlTextPrimary)
                 .lineLimit(1)
-                .padding(.horizontal, AppSpacing.md)
-                .frame(height: Metrics.resetOnboardingButtonHeight)
-                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: Capsule())
+        .font(AppFont.button)
+        .foregroundStyle(AppColor.controlTextPrimary)
+        .padding(.horizontal, AppSpacing.md)
+        .frame(height: Metrics.resetOnboardingButtonHeight)
+        .contentShape(Capsule())
+        .glassEffect(
+            onboardingViewModel.hasCompletedOnboarding
+                ? .regular.interactive() : .regular,
+            in: Capsule()
+        )
+        .disabled(!onboardingViewModel.hasCompletedOnboarding)
+        .opacity(onboardingViewModel.hasCompletedOnboarding ? 1 : 0.48)
         .accessibilityLabel("Reset onboarding")
     }
 
     private func resetOnboarding() {
-        hasCompletedOnboarding = false
-        router.replace(with: .onboarding(.main))
+        onboardingViewModel.resetOnboarding()
+        router.requestSplashRestart()
     }
 #endif
 

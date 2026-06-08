@@ -7,8 +7,7 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
-    @AppStorage(OnboardingDefaults.hasCompletedOnboardingKey)
-    private var hasCompletedOnboarding = false
+    @StateObject private var onboardingViewModel = OnboardingViewModel()
     @State private var isShowingSplash = true
 
     var body: some View {
@@ -30,6 +29,13 @@ struct RootView: View {
                         }
                 }
             }
+        }
+        .onChange(of: router.shouldRestartSplash) { _, shouldRestartSplash in
+            guard shouldRestartSplash else {
+                return
+            }
+
+            restartSplash()
         }
     }
 
@@ -71,12 +77,21 @@ struct RootView: View {
             return
         }
 
-        if hasCompletedOnboarding {
+        onboardingViewModel.loadCompletionState()
+
+        if onboardingViewModel.hasCompletedOnboarding {
             router.popToRoot()
         } else {
             router.replace(with: .onboarding(.main))
         }
 
         isShowingSplash = false
+    }
+
+    @MainActor
+    private func restartSplash() {
+        router.popToRoot()
+        isShowingSplash = true
+        router.consumeSplashRestartRequest()
     }
 }

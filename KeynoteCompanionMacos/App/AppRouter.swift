@@ -8,6 +8,7 @@ import SwiftUI
 
 final class AppRouter: ObservableObject {
     @Published var path: [AppRoute] = []
+    @Published var shouldRestartSplash = false
 
     var activeRoute: AppRoute? {
         path.last
@@ -29,5 +30,13 @@ final class AppRouter: ObservableObject {
     func replace(with route: AppRoute) {
         path.removeLast(path.count)
         path.append(route)
+    }
+
+    func requestSplashRestart() {
+        shouldRestartSplash = true
+    }
+
+    func consumeSplashRestartRequest() {
+        shouldRestartSplash = false
     }
 }
