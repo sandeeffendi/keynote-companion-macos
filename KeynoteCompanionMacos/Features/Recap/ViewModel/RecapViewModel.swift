@@ -16,7 +16,7 @@ final class RecapViewModel: ObservableObject {
         recapData: RecapModel = RecapModel(
             sesTitle: "Practice Recording 1",
             sesKeynote: "HIG Reading Materials",
-            date: "Monday, 17 August 2026",
+            date: "Monday, 17 August 1945",
             time: "10:00",
             duration: "00:05:00",
             feedback: [

@@ -12,6 +12,7 @@ import SwiftData
 
 struct RecapView: View {
     @EnvironmentObject private var route: AppRouter
+    var isFromHistory: Bool
     @StateObject private var viewModel: RecapViewModel
     @Environment(\.modelContext) private var modelContext
     let saveTip = SaveSessionTip()
@@ -24,11 +25,14 @@ struct RecapView: View {
     @State private var playbackProgress: Double = 0.0
     @State private var totalDuration: TimeInterval = 300.0
 
-    init(viewModel: RecapViewModel) {
+    
+    init(isFromHistory: Bool, viewModel: RecapViewModel) {
+        self.isFromHistory = isFromHistory
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     var body: some View {
+        let _ = print("isFromHistory: \(isFromHistory)")
         VStack(alignment: .leading, spacing: 0) {
             header
                 .padding(.bottom, 20)
@@ -49,8 +53,9 @@ struct RecapView: View {
         .frame(maxWidth: 560, minHeight: 700, alignment: .leading)
         .padding(24)
         .navigationTitle("Tiempo")
-        .navigationBarBackButtonHidden()
-    }
+        .navigationBarBackButtonHidden(!isFromHistory).onAppear {
+            print("isFromHistory: \(isFromHistory)")
+        }}
 
     // MARK: - Header
 
@@ -196,5 +201,6 @@ struct RecapView: View {
 }
 
 #Preview {
-    RecapView(viewModel: RecapViewModel())
+    RecapView(isFromHistory: false, viewModel: RecapViewModel())
 }
+
