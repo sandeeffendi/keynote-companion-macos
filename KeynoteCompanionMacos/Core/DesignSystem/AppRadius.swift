@@ -25,6 +25,9 @@ enum AppSize {
     static let homeWindowWidth: CGFloat = 560
     static let homeWindowHeight: CGFloat = 374
 
+    static let onboardingWindowWidth: CGFloat = 560
+    static let onboardingWindowHeight: CGFloat = 586
+
     static let headerHeight: CGFloat = 32
     static let trafficLightSize: CGFloat = 12
     static let iconCircleSize: CGFloat = 64

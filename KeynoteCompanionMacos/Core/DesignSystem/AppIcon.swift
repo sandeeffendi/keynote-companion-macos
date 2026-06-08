@@ -20,4 +20,8 @@ enum AppIcon {
     static let permissionMicrophone = "microphone"
     static let permissionScreen = "tv"
     static let permissionWPMDetector = "waveform.badge.microphone"
+
+    static let onboardingSpeechRate = "microphone.and.signal.meter"
+    static let onboardingFillerWords = "person.wave.2"
+    static let onboardingInsights = "text.document"
 }
