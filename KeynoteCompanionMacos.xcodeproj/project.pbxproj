@@ -6,11 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		A10000082FC9000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D31153042FC53E1900D2705F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D311530B2FC53E1900D2705F;
+			remoteInfo = KeynoteCompanionMacos;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		D311530C2FC53E1900D2705F /* KeynoteCompanionMacos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeynoteCompanionMacos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000072FC9000000000007 /* KeynoteCompanionMacosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeynoteCompanionMacosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D311530C2FC53E1900D2705F /* Tiempo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tiempo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A10000022FC9000000000002 /* KeynoteCompanionMacosTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeynoteCompanionMacosTests;
+			sourceTree = "<group>";
+		};
 		D311530E2FC53E1900D2705F /* KeynoteCompanionMacos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KeynoteCompanionMacos;
@@ -19,6 +35,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A10000052FC9000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D31153092FC53E1900D2705F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				D311530E2FC53E1900D2705F /* KeynoteCompanionMacos */,
+				A10000022FC9000000000002 /* KeynoteCompanionMacosTests */,
 				D311530D2FC53E1900D2705F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +64,8 @@
 		D311530D2FC53E1900D2705F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D311530C2FC53E1900D2705F /* KeynoteCompanionMacos.app */,
+				D311530C2FC53E1900D2705F /* Tiempo.app */,
+				A10000072FC9000000000007 /* KeynoteCompanionMacosTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +73,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A10000032FC9000000000003 /* KeynoteCompanionMacosTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A100000A2FC900000000000A /* Build configuration list for PBXNativeTarget "KeynoteCompanionMacosTests" */;
+			buildPhases = (
+				A10000042FC9000000000004 /* Sources */,
+				A10000052FC9000000000005 /* Frameworks */,
+				A10000062FC9000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000092FC9000000000009 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000022FC9000000000002 /* KeynoteCompanionMacosTests */,
+			);
+			name = KeynoteCompanionMacosTests;
+			packageProductDependencies = (
+			);
+			productName = KeynoteCompanionMacosTests;
+			productReference = A10000072FC9000000000007 /* KeynoteCompanionMacosTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D31153172FC53E1A00D2705F /* Build configuration list for PBXNativeTarget "KeynoteCompanionMacos" */;
@@ -67,7 +115,7 @@
 			packageProductDependencies = (
 			);
 			productName = KeynoteCompanionMacos;
-			productReference = D311530C2FC53E1900D2705F /* KeynoteCompanionMacos.app */;
+			productReference = D311530C2FC53E1900D2705F /* Tiempo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -80,6 +128,10 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					A10000032FC9000000000003 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = D311530B2FC53E1900D2705F;
+					};
 					D311530B2FC53E1900D2705F = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -100,11 +152,19 @@
 			projectRoot = "";
 			targets = (
 				D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */,
+				A10000032FC9000000000003 /* KeynoteCompanionMacosTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A10000062FC9000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D311530A2FC53E1900D2705F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +175,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A10000042FC9000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D31153082FC53E1900D2705F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +191,70 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A10000092FC9000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */;
+			targetProxy = A10000082FC9000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		A100000B2FC900000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.TiempoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tiempo.app/Contents/MacOS/Tiempo";
+			};
+			name = Debug;
+		};
+		A100000C2FC900000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.TiempoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tiempo.app/Contents/MacOS/Tiempo";
+			};
+			name = Release;
+		};
 		D31153152FC53E1A00D2705F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -272,6 +402,8 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
+				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -280,8 +412,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.KeynoteCompanionMacos999;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.Tiempo;
+				PRODUCT_MODULE_NAME = KeynoteCompanionMacos;
+				PRODUCT_NAME = Tiempo;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -320,6 +453,8 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
+				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -328,8 +463,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.KeynoteCompanionMacos999;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.Tiempo;
+				PRODUCT_MODULE_NAME = KeynoteCompanionMacos;
+				PRODUCT_NAME = Tiempo;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -344,6 +480,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A100000A2FC900000000000A /* Build configuration list for PBXNativeTarget "KeynoteCompanionMacosTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A100000B2FC900000000000B /* Debug */,
+				A100000C2FC900000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D31153072FC53E1900D2705F /* Build configuration list for PBXProject "KeynoteCompanionMacos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

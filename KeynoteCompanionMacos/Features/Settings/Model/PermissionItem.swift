@@ -13,11 +13,11 @@ extension PermissionItem {
         permissionType: .microphone
     )
 
-    nonisolated static let screen = PermissionItem(
-        icon: AppIcon.permissionScreen,
-        title: "Allow Screen Access",
-        description: "For detecting your keynote slideshow mode",
-        permissionType: .screenPlaceholder
+    nonisolated static let keynoteAutomation = PermissionItem(
+        icon: AppIcon.permissionKeynoteAutomation,
+        title: "Allow Keynote Automation",
+        description: "For detecting your Keynote slideshow mode",
+        permissionType: .keynoteAutomation
     )
 
     nonisolated static let wpmDetector = PermissionItem(
@@ -30,7 +30,7 @@ extension PermissionItem {
 
 enum PermissionType: Sendable {
     case microphone
-    case screenPlaceholder
+    case keynoteAutomation
     case wpmPlaceholder
 }
 
