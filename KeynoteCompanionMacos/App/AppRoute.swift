@@ -9,5 +9,6 @@ enum AppRoute: Hashable {
     case home(HomeRoute)
     case settings(SettingsRoute)
     case recap(RecapRoute)
+    case history(HistoryRoute)
     case onboarding(OnboardingRoute)
 }

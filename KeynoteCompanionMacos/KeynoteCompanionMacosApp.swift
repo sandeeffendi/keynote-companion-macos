@@ -5,21 +5,24 @@
 //  Created by Sande Effendi on 26/05/26.
 //
 
-import AppKit
 import SwiftUI
+import TipKit
+import SwiftData
 
 @main
 struct KeynoteCompanionMacosApp: App {
     @StateObject private var router = AppRouter()
 
     init() {
-        NSApplication.shared.appearance = NSAppearance(named: .aqua)
+        try? Tips.resetDatastore()
+        try? Tips.configure()
     }
-
+    
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(router)
+                .modelContainer(for: HistoryModel.self)
                 .preferredColorScheme(.light)
         }
         .defaultSize(

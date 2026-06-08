@@ -27,14 +27,13 @@ struct HomeView: View {
                 onOpenKeynoteFileTapped: viewModel.openKeynoteFile
             )
 
-            Spacer(minLength: 0)
+            Button("Go to Settings") {
+                router.push(.history(.main))
+            }
 
-            HomeFooterView(
-                isRecordEnabled: viewModel.state.isRecordEnabled,
-                onOpenSettingsTapped: openSettings,
-                onActivitiesTapped: showActivities,
-                onRecordPracticeTapped: viewModel.recordPractice
-            )
+            Button("Go to Recap Screen") {
+                router.push(.recap(.main))
+            }
         }
         .padding(.horizontal, AppSpacing.xl)
         .padding(.top, AppSpacing.lg)
