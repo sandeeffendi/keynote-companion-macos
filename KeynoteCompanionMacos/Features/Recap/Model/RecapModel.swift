@@ -29,6 +29,7 @@ struct Feedback {
 struct Slide: Codable {
     let no: Int
     let value: Int
+    let timestamp: TimeInterval 
 }
 
 

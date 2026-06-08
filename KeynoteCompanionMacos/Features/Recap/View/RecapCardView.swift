@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RecapCardView: View {
     let feedback: Feedback
+    var onSeek: (TimeInterval) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -54,13 +55,14 @@ struct RecapCardView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Button {
-                                // TODO: jump to slide audio
+                                onSeek(slide.timestamp)
                             } label: {
                                 Image(systemName: "play.fill")
                                     .font(.caption)
                                     .foregroundStyle(.primary)
                             }
                             .buttonStyle(.plain)
+                            
                         }
                         .padding(.vertical, 12)
 
@@ -77,6 +79,7 @@ struct RecapCardView: View {
     }
 }
 
+
 #Preview {
     RecapCardView(feedback: Feedback(
         title: "Average Speaking Rate",
@@ -86,10 +89,10 @@ struct RecapCardView: View {
         subTitle: "The ideal speech rate is 110 to 160 WPM",
         category: "Speaking rate",
         perSlide: [
-            Slide(no: 5, value: 170),
-            Slide(no: 8, value: 180)
+            Slide(no: 5, value: 170, timestamp: 72.0),
+            Slide(no: 8, value: 180, timestamp: 144.0)
         ]
-    ))
+    )) { _ in }
     .frame(width: 280)
     .padding()
     .background(Color(nsColor: .windowBackgroundColor))

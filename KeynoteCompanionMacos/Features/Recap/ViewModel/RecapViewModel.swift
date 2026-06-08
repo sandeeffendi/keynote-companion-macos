@@ -28,11 +28,9 @@ final class RecapViewModel: ObservableObject {
                     subTitle: "Your average pace is slightly fast",
                     category: "WPM",
                     perSlide: [
-                        Slide(no: 1, value: 120),
-                        Slide(no: 2, value: 145),
-                        Slide(no: 3, value: 100),
-                        Slide(no: 4, value: 160),
-                        Slide(no: 5, value: 190)
+                        Slide(no: 1, value: 120, timestamp: 0),
+                        Slide(no: 2, value: 145, timestamp: 63.0),
+                        Slide(no: 3, value: 100, timestamp: 130.5)
                     ]
                 ),
                 Feedback(
@@ -43,11 +41,9 @@ final class RecapViewModel: ObservableObject {
                     subTitle: "You used quite a lot of filler words",
                     category: "Filler",
                     perSlide: [
-                        Slide(no: 1, value: 8),
-                        Slide(no: 2, value: 10),
-                        Slide(no: 3, value: 12),
-                        Slide(no: 4, value: 2),
-                        Slide(no: 5, value: 15)
+                        Slide(no: 1, value: 120, timestamp: 0),
+                        Slide(no: 2, value: 145, timestamp: 63.0),
+                        Slide(no: 3, value: 100, timestamp: 130.5)
                     ]
                 )
             ]
