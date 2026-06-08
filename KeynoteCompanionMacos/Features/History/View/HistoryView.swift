@@ -5,7 +5,6 @@
 //  Created by Rahmadina on 07/06/26.
 //
 
-
 import SwiftUI
 import SwiftData
 
@@ -16,79 +15,112 @@ struct HistoryView: View {
     @State private var sessionDelete: HistoryModel? = nil
 
     private var header: some View {
-        HStack{
-            Button{
+        HStack {
+            Button {
                 route.pop()
                 route.push(.home(.main))
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 24)).frame(width: 36, height: 36)
-            }.clipShape(Circle())
-            HStack{
-                Button{
-                } label: {
+                    .font(.system(size: 24))
+                    .frame(width: 36, height: 36)
+            }
+            .clipShape(Circle())
+
+            HStack {
+                Button {} label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 20))
-                }.clipShape(Circle()).buttonStyle(PlainButtonStyle()).padding(.leading, 10)
-                TextField("Search", text: .constant("")).padding(.trailing,10).textFieldStyle(.plain)
-            }.frame(maxWidth: .infinity, minHeight: 42).background(Color(.sRGB, red: 0.8, green: 0.8, blue: 0.8, opacity: 0.2))
-                .cornerRadius(100)
+                }
+                .clipShape(Circle())
+                .buttonStyle(PlainButtonStyle())
+                .padding(.leading, 10)
+
+                TextField("Search", text: .constant(""))
+                    .padding(.trailing, 10)
+                    .textFieldStyle(.plain)
+            }
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(Color(.sRGB, red: 0.8, green: 0.8, blue: 0.8, opacity: 0.2))
+            .cornerRadius(100)
+
             Spacer()
         }
     }
-    
+
     private var list: some View {
-        VStack(alignment: .leading){
-            Text("Monday, 17 August 2026").font(.title2).bold()
-            ForEach(sessions) { session in
-                SessionRow(session: session)
+        let groups = viewModel.grouped(sessions)
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(groups, id: \.date) { group in
+                VStack(alignment: .leading) {
+                    Text(group.date)
+                        .font(.title2.bold())
+                        .padding(.bottom, 4)
+
+                    ForEach(group.sessions) { session in
+                        SessionRow(session: session)
+                    }
+                }
+                .padding(16)
             }
-        }.padding(16)
+        }
     }
-    
+
     var body: some View {
         VStack(alignment: .leading) {
-           header
-           list
-        Spacer()
-        }.frame(maxWidth: 560, minHeight: 700, alignment: .leading)
-            .padding(24)
-            .cornerRadius(.bgFeedback)
-            .navigationTitle("Tiempo")
-            .navigationBarBackButtonHidden()
+            header
+            ScrollView {
+                list
+            }
+            Spacer()
+        }
+        .frame(maxWidth: 560, minHeight: 700, alignment: .leading)
+        .padding(24)
+        .navigationTitle("Tiempo")
+        .navigationBarBackButtonHidden()
     }
 }
 
-
-private struct SessionRow: View {
+struct SessionRow: View {
     @EnvironmentObject private var route: AppRouter
     let session: HistoryModel
 
     var body: some View {
-        HStack{
-            VStack{
-                Image(systemName: "text.document").font(.system(size: 22)).padding(.trailing,26).padding(.bottom,13)
+        HStack {
+            VStack {
+                Image(systemName: "text.document")
+                    .font(.system(size: 22))
+                    .padding(.trailing, 26)
+                    .padding(.bottom, 13)
             }
-            VStack{
-                HStack{
-                    Text(session.sesTitle).font(.title2)
+
+            VStack {
+                HStack {
+                    Text(session.sesTitle)
+                        .font(.title2)
                     Spacer()
-                    Text(session.time).font(.title2)
-                    Button{
+                    Text(session.time)
+                        .font(.title2)
+                    Button {
                         route.pop()
                         route.push(.recap(.main))
-                    }label:{
-                        Image(systemName: "chevron.right").font(.system(size: 22))
-                    }.cornerRadius(100).buttonStyle(.plain).padding(.leading,10)
-                }.padding(.bottom,10)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 22))
+                    }
+                    .cornerRadius(100)
+                    .buttonStyle(.plain)
+                    .padding(.leading, 10)
+                }
+                .padding(.bottom, 10)
+
                 Divider()
             }
-        }.padding(.leading,30).padding(.top,16)
+        }
+        .padding(.leading, 30)
+        .padding(.top, 16)
     }
 }
 
 #Preview {
-    HistoryView(
-        viewModel: HistoryViewModel()
-    )
+    HistoryView(viewModel: HistoryViewModel())
 }
