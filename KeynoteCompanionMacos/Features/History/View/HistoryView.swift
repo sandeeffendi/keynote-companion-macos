@@ -61,6 +61,7 @@ struct HistoryView: View {
 
 
 private struct SessionRow: View {
+    @EnvironmentObject private var route: AppRouter
     let session: HistoryModel
 
     var body: some View {
@@ -74,6 +75,8 @@ private struct SessionRow: View {
                     Spacer()
                     Text(session.time).font(.title2)
                     Button{
+                        route.pop()
+                        route.push(.recap(.main))
                     }label:{
                         Image(systemName: "chevron.right").font(.system(size: 22))
                     }.cornerRadius(100).buttonStyle(.plain).padding(.leading,10)
