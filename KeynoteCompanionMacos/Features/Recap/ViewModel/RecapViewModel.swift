@@ -13,51 +13,75 @@ final class RecapViewModel: ObservableObject {
     @Published var recapData: RecapModel
 
     init(
-            recapData: RecapModel = RecapModel(
-                sesTitle: "Practice Recording 1",
-                sesKeynote: "HIG Reading Materials",
-                date: "Monday, 17 August 2026",
-                time: "10:00",
-                duration: "00:05:00",
-                wpm: FeedbackModel(
+        recapData: RecapModel = RecapModel(
+            sesTitle: "Practice Recording 1",
+            sesKeynote: "HIG Reading Materials",
+            date: "Monday, 17 August 2026",
+            time: "10:00",
+            duration: "00:05:00",
+            feedback: [
+                Feedback(
+                    title: "Speaking Pace",
                     overall: 152,
-                    highest: HighlightModel(value: 190, slide: 5),
-                    lowest: HighlightModel(value: 100, slide: 3),
-                    recommendation: "On slide 5, your speaking pace was quite fast. Try slowing down."
+                    unit: "WPM",
+                    tips: "On slide 5, your speaking pace was quite fast. Try slowing down.",
+                    subTitle: "Your average pace is slightly fast",
+                    category: "WPM",
+                    perSlide: [
+                        Slide(no: 1, value: 120),
+                        Slide(no: 2, value: 145),
+                        Slide(no: 3, value: 100),
+                        Slide(no: 4, value: 160),
+                        Slide(no: 5, value: 190)
+                    ]
                 ),
-                filler: FeedbackModel(
+                Feedback(
+                    title: "Filler Words",
                     overall: 60,
-                    highest: HighlightModel(value: 15, slide: 5),
-                    lowest: HighlightModel(value: 2, slide: 6),
-                    recommendation: "On slide 5, you used 15 filler words. Try pausing between sentences."
-                ),
-                tips: [
-                    "An ideal speaking pace is between 120 and 160 WPM.",
-                    "If your session exceeds your target duration, try tightening your phrasing."
-                ]
-            )){
+                    unit: "words",
+                    tips: "On slide 5, you used 15 filler words. Try pausing between sentences.",
+                    subTitle: "You used quite a lot of filler words",
+                    category: "Filler",
+                    perSlide: [
+                        Slide(no: 1, value: 8),
+                        Slide(no: 2, value: 10),
+                        Slide(no: 3, value: 12),
+                        Slide(no: 4, value: 2),
+                        Slide(no: 5, value: 15)
+                    ]
+                )
+            ]
+        )
+    ) {
         self.recapData = recapData
     }
-    
+
     func saveRecap(context: ModelContext) {
+        print("saving recap...")
+
+        let historyFeedbacks = recapData.feedback.map { feedback in
+            HistoryFeedback(
+                title: feedback.title,
+                overall: feedback.overall,
+                unit: feedback.unit,
+                tips: feedback.tips,
+                subTitle: feedback.subTitle,
+                category: feedback.category,
+                perSlide: feedback.perSlide
+            )
+        }
+
         let recap = HistoryModel(
             sesTitle: recapData.sesTitle,
             sesKeynote: recapData.sesKeynote,
             date: recapData.date,
             time: recapData.time,
             duration: recapData.duration,
-            wpmOverall: recapData.wpm.overall,
-            wpmHighest: recapData.wpm.highest.value,
-            wpmLowest: recapData.wpm.highest.slide,
-            wpmHighestSlides: recapData.wpm.lowest.value,
-            wpmLowestSlides: recapData.wpm.lowest.slide,
-            fillerOverall: recapData.filler.overall,
-            fillerHighest: recapData.filler.highest.value,
-            fillerLowest: recapData.filler.highest.slide,
-            fillerHighestSlides: recapData.filler.lowest.value,
-            fillerLowestSlides: recapData.filler.lowest.slide
+            feedbacks: historyFeedbacks
         )
+
         context.insert(recap)
         try? context.save()
+        print("saved: \(recap.sesTitle)")
     }
 }

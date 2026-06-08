@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import TipKit
+import SwiftData
 
 @main
 struct KeynoteCompanionMacosApp: App {
@@ -24,6 +25,9 @@ struct KeynoteCompanionMacosApp: App {
                     .environmentObject(router)
             }
             .preferredColorScheme(.light)
+            RootView()
+                .environmentObject(router)
+                .modelContainer(for: HistoryModel.self) 
         }
         .defaultSize(
             width: AppSize.homeWindowWidth,

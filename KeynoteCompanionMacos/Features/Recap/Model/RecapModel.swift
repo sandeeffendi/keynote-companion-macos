@@ -13,19 +13,23 @@ struct RecapModel {
     let date: String
     let time: String
     let duration: String
-    let wpm: FeedbackModel
-    let filler: FeedbackModel
-    let tips: [String]
+    let feedback: [Feedback]
 }
 
-struct FeedbackModel {
+struct Feedback {
+    let title: String
     let overall: Int
-    let highest: HighlightModel
-    let lowest: HighlightModel
-    let recommendation: String
+    let unit: String //satuan
+    let tips: String
+    let subTitle: String
+    let category: String
+    let perSlide: [Slide]
 }
 
-struct HighlightModel {
+struct Slide: Codable {
+    let no: Int
     let value: Int
-    let slide: Int
 }
+
+
+
