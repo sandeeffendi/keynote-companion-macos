@@ -27,7 +27,7 @@ struct KeynoteCompanionMacosApp: App {
             .preferredColorScheme(.light)
             RootView()
                 .environmentObject(router)
-                .modelContainer(for: HistoryModel.self) 
+                .modelContainer(for: HistoryModel.self)
         }
         .defaultSize(
             width: AppSize.homeWindowWidth,

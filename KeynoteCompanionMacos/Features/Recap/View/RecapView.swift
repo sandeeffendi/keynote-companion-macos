@@ -22,6 +22,7 @@ struct RecapView: View {
     @State private var isPlaying: Bool = false
     @State private var isMuted: Bool = false
     @State private var playbackProgress: Double = 0.0
+    @State private var totalDuration: TimeInterval = 300.0
 
     init(viewModel: RecapViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -146,7 +147,10 @@ struct RecapView: View {
     private var feedbackCards: some View {
         HStack(alignment: .top, spacing: 12) {
             ForEach(viewModel.recapData.feedback, id: \.category) { feedback in
-                RecapCardView(feedback: feedback)
+                RecapCardView(feedback: feedback){
+                    timestamp in
+                        playbackProgress = totalDuration > 0 ? timestamp / totalDuration : 0
+                }
                     .frame(maxWidth: .infinity)
             }
         }
