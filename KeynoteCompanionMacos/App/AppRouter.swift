@@ -7,7 +7,11 @@ import Combine
 import SwiftUI
 
 final class AppRouter: ObservableObject {
-    @Published var path = NavigationPath()
+    @Published var path: [AppRoute] = []
+
+    var activeRoute: AppRoute? {
+        path.last
+    }
 
     func push(_ route: AppRoute) {
         path.append(route)

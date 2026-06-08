@@ -7,6 +7,8 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
+    @AppStorage(OnboardingDefaults.hasCompletedOnboardingKey)
+    private var hasCompletedOnboarding = false
     @State private var isShowingSplash = true
 
     var body: some View {
@@ -32,15 +34,35 @@ struct RootView: View {
     }
 
     private var windowWidth: CGFloat {
-        isShowingSplash
-            ? AppSize.splashWindowWidth
-            : AppSize.homeWindowWidth
+        if isShowingSplash {
+            return AppSize.splashWindowWidth
+        }
+
+        if isShowingOnboarding {
+            return AppSize.onboardingWindowWidth
+        }
+
+        return AppSize.homeWindowWidth
     }
 
     private var windowHeight: CGFloat {
-        isShowingSplash
-            ? AppSize.splashWindowHeight
-            : AppSize.homeWindowHeight
+        if isShowingSplash {
+            return AppSize.splashWindowHeight
+        }
+
+        if isShowingOnboarding {
+            return AppSize.onboardingWindowHeight
+        }
+
+        return AppSize.homeWindowHeight
+    }
+
+    private var isShowingOnboarding: Bool {
+        if case .onboarding = router.activeRoute {
+            return true
+        }
+
+        return false
     }
 
     @MainActor
@@ -49,7 +71,12 @@ struct RootView: View {
             return
         }
 
-        router.popToRoot()
+        if hasCompletedOnboarding {
+            router.popToRoot()
+        } else {
+            router.replace(with: .onboarding(.main))
+        }
+
         isShowingSplash = false
     }
 }
