@@ -8,6 +8,10 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: SettingsViewModel
+#if DEBUG
+    @AppStorage(OnboardingDefaults.hasCompletedOnboardingKey)
+    private var hasCompletedOnboarding = false
+#endif
 
     init(viewModel: SettingsViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -25,10 +29,18 @@ struct SettingsView: View {
                     router.popToRoot()
                 }
 
-                Text("Settings")
-                    .font(AppFont.settingHead)
-                    .foregroundStyle(AppColor.textPrimary)
-                    .padding(.top, AppSpacing.md)
+                HStack(spacing: AppSpacing.md) {
+                    Text("Settings")
+                        .font(AppFont.settingHead)
+                        .foregroundStyle(AppColor.textPrimary)
+
+                    Spacer(minLength: 0)
+
+#if DEBUG
+                    resetOnboardingButton
+#endif
+                }
+                .padding(.top, AppSpacing.md)
 
                 permissionsList
                     .padding(.top, AppSpacing.xs)
@@ -74,8 +86,31 @@ struct SettingsView: View {
         }
     }
 
+#if DEBUG
+    private var resetOnboardingButton: some View {
+        Button(action: resetOnboarding) {
+            Text("Reset Onboarding")
+                .font(AppFont.button)
+                .foregroundStyle(AppColor.controlTextPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, AppSpacing.md)
+                .frame(height: Metrics.resetOnboardingButtonHeight)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Capsule())
+        .accessibilityLabel("Reset onboarding")
+    }
+
+    private func resetOnboarding() {
+        hasCompletedOnboarding = false
+        router.replace(with: .onboarding(.main))
+    }
+#endif
+
     private enum Metrics {
         static let backButtonSize: CGFloat = 36
+        static let resetOnboardingButtonHeight: CGFloat = 32
     }
 }
 
