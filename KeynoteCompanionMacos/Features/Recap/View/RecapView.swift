@@ -50,7 +50,7 @@ struct RecapView: View {
 
             footer
         }
-        .frame(maxWidth: 560, minHeight: 700, alignment: .leading)
+        .frame(alignment: .leading)
         .padding(24)
         .navigationTitle("Tiempo")
         .navigationBarBackButtonHidden(!isFromHistory).onAppear {
