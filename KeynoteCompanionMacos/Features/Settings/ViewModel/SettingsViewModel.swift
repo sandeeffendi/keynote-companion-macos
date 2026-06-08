@@ -7,6 +7,8 @@ import AVFoundation
 import AppKit
 import Combine
 import Foundation
+import AVFoundation
+import AppKit
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
