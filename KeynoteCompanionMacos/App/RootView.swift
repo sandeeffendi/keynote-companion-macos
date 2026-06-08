@@ -37,7 +37,28 @@ struct RootView: View {
 
             restartSplash()
         }
-        .background(Color.clear)
+    }
+
+    private var windowWidth: CGFloat {
+        isShowingSplash
+            ? AppSize.splashWindowWidth
+            : AppSize.homeWindowWidth
+    }
+
+    private var windowHeight: CGFloat {
+        isShowingSplash
+            ? AppSize.splashWindowHeight
+            : AppSize.homeWindowHeight
+    }
+
+    @MainActor
+    private func showHome() {
+        guard isShowingSplash else {
+            return
+        }
+
+        router.popToRoot()
+        isShowingSplash = false
     }
 
     private var windowWidth: CGFloat {
