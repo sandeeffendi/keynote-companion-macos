@@ -10,6 +10,7 @@ import SwiftUI
 
 struct HomeStatusContentView: View {
     let state: HomeViewState
+    let errorMessage: String?
     let onOpenKeynoteFileTapped: () -> Void
 
     var body: some View {
@@ -37,6 +38,15 @@ struct HomeStatusContentView: View {
                     action: onOpenKeynoteFileTapped
                 )
                 .padding(.top, AppSpacing.xs)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(AppFont.settingDescription)
+                    .foregroundStyle(AppColor.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(maxWidth: AppSize.statusContentWidth)
             }
         }
     }

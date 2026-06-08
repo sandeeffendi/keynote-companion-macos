@@ -23,6 +23,7 @@ struct HomeView: View {
 
             HomeStatusContentView(
                 state: viewModel.state,
+                errorMessage: viewModel.errorMessage,
                 onOpenKeynoteFileTapped: viewModel.openKeynoteFile
             )
 
@@ -43,6 +44,9 @@ struct HomeView: View {
             height: AppSize.homeWindowHeight
         )
         .background(Color.clear)
+        .task {
+            await viewModel.observeSession()
+        }
     }
 
     private func openSettings() {

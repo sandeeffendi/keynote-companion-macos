@@ -12,26 +12,52 @@ import AppKit
 final class SettingsViewModel: ObservableObject {
 
     @Published var settingsData: SettingsModel
+    private let automationPermissionService: KeynoteAutomationPermissionChecking
+    private var automationRefreshTask: Task<Void, Never>?
+    private var automationRefreshRequestID: UUID?
+
+    convenience init() {
+        self.init(
+            settingsData: SettingsModel(
+                permissionItems: [
+                    .microphone,
+                    .keynoteAutomation,
+                    .wpmDetector
+                ]
+            ),
+            automationPermissionService: KeynoteAutomationPermissionService(
+                appResolver: KeynoteAppResolver()
+            )
+        )
+    }
 
     init(
         settingsData: SettingsModel =
-        SettingsModel (
+        SettingsModel(
             permissionItems: [
                 .microphone,
-                .screen,
+                .keynoteAutomation,
                 .wpmDetector
             ]
-        )
+        ),
+        automationPermissionService: KeynoteAutomationPermissionChecking
     ) {
         self.settingsData = settingsData
+        self.automationPermissionService = automationPermissionService
         refreshAllPermissionStatuses()
+    }
+
+    deinit {
+        automationRefreshTask?.cancel()
     }
 
     func currentStatus(for type: PermissionType) -> PermissionStatus {
         switch type {
         case .microphone:
             return microphoneStatus()
-        case .screenPlaceholder, .wpmPlaceholder:
+        case .keynoteAutomation:
+            return storedStatus(for: type)
+        case .wpmPlaceholder:
             return .denied
         }
     }
@@ -55,13 +81,17 @@ final class SettingsViewModel: ObservableObject {
             settingsData.permissionItems[index].status = status
             settingsData.permissionItems[index].isEnabled = (status == .authorized)
         }
+
+        startAutomationRefresh(promptIfNeeded: false)
     }
 
     func isPermissionEnabled(_ type: PermissionType) -> Bool {
         switch type {
         case .microphone:
             return currentStatus(for: type) == .authorized
-        case .screenPlaceholder, .wpmPlaceholder:
+        case .keynoteAutomation:
+            return storedStatus(for: type) == .authorized
+        case .wpmPlaceholder:
             return false
         }
     }
@@ -70,7 +100,9 @@ final class SettingsViewModel: ObservableObject {
         switch type {
         case .microphone:
             toggleMicrophonePermission(newValue: newValue)
-        case .screenPlaceholder, .wpmPlaceholder:
+        case .keynoteAutomation:
+            toggleKeynoteAutomationPermission(newValue: newValue)
+        case .wpmPlaceholder:
             setPermissionEnabled(false, for: type)
         }
     }
@@ -105,7 +137,7 @@ final class SettingsViewModel: ObservableObject {
                     self?.refreshAllPermissionStatuses()
                 }
             }
-        case .screenPlaceholder, .wpmPlaceholder:
+        case .keynoteAutomation, .wpmPlaceholder:
             break
         }
     }
@@ -115,7 +147,9 @@ final class SettingsViewModel: ObservableObject {
         switch type {
         case .microphone:
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-        case .screenPlaceholder, .wpmPlaceholder:
+        case .keynoteAutomation:
+            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+        case .wpmPlaceholder:
             return
         }
         if let url = URL(string: urlString) {
@@ -134,5 +168,101 @@ final class SettingsViewModel: ObservableObject {
         }
 
         settingsData.permissionItems[index].isEnabled = isEnabled
+    }
+
+    private func toggleKeynoteAutomationPermission(newValue: Bool) {
+        let status = storedStatus(for: .keynoteAutomation)
+
+        if newValue {
+            switch status {
+            case .notDetermined:
+                startAutomationRefresh(promptIfNeeded: true)
+            case .denied:
+                setPermissionEnabled(false, for: .keynoteAutomation)
+                openSystemSettings(for: .keynoteAutomation)
+            case .authorized:
+                setPermissionEnabled(true, for: .keynoteAutomation)
+            }
+        } else {
+            setPermissionEnabled(status == .authorized, for: .keynoteAutomation)
+
+            if status == .authorized {
+                openSystemSettings(for: .keynoteAutomation)
+            }
+        }
+    }
+
+    private func startAutomationRefresh(promptIfNeeded: Bool) {
+        automationRefreshTask?.cancel()
+        let requestID = UUID()
+        automationRefreshRequestID = requestID
+        automationRefreshTask = Task { [weak self] in
+            await self?.refreshKeynoteAutomationStatus(
+                promptIfNeeded: promptIfNeeded,
+                requestID: requestID
+            )
+        }
+    }
+
+    private func refreshKeynoteAutomationStatus(
+        promptIfNeeded: Bool,
+        requestID: UUID
+    ) async {
+        defer {
+            clearAutomationRefreshTaskIfCurrent(requestID: requestID)
+        }
+
+        let status = await automationPermissionService.authorizationStatus(
+            promptIfNeeded: promptIfNeeded
+        )
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        updatePermissionStatus(
+            mapAutomationStatus(status),
+            for: .keynoteAutomation
+        )
+    }
+
+    private func clearAutomationRefreshTaskIfCurrent(requestID: UUID) {
+        if automationRefreshRequestID == requestID {
+            automationRefreshTask = nil
+            automationRefreshRequestID = nil
+        }
+    }
+
+    private func mapAutomationStatus(
+        _ status: KeynoteAutomationPermissionState
+    ) -> PermissionStatus {
+        switch status {
+        case .authorized:
+            return .authorized
+        case .notDetermined:
+            return .notDetermined
+        case .denied, .keynoteUnavailable, .targetNotRunning, .error:
+            return .denied
+        }
+    }
+
+    private func updatePermissionStatus(
+        _ status: PermissionStatus,
+        for type: PermissionType
+    ) {
+        guard let index = settingsData.permissionItems.firstIndex(
+            where: { $0.permissionType == type }
+        ) else {
+            return
+        }
+
+        settingsData.permissionItems[index].status = status
+        settingsData.permissionItems[index].isEnabled = (status == .authorized)
+    }
+
+    private func storedStatus(for type: PermissionType) -> PermissionStatus {
+        settingsData.permissionItems.first {
+            $0.permissionType == type
+        }?.status ?? .notDetermined
     }
 }
