@@ -306,7 +306,138 @@ final class HomeViewModel: ObservableObject {
 
     func showActivities() {}
 
-    func openKeynoteFile() {}
+    func openKeynoteFile() {
+        openFileTask?.cancel()
+        let requestID = UUID()
+        openFileRequestID = requestID
+        openFileTask = Task { [weak self] in
+            await self?.openSelectedKeynoteFile(requestID: requestID)
+        }
+    }
 
     func recordPractice() {}
+
+    func refreshSessionStatus() async {
+        guard microphonePermissionService.authorizationStatus() == .authorized else {
+            apply(.permissionMissing)
+            return
+        }
+
+        let automationStatus = await automationPermissionService.authorizationStatus(
+            promptIfNeeded: false
+        )
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        switch automationStatus {
+        case .authorized:
+            break
+        case .notDetermined, .denied:
+            apply(.permissionMissing)
+            return
+        case .keynoteUnavailable:
+            apply(
+                .keynoteUnavailable,
+                errorMessage: "Keynote is not installed on this Mac."
+            )
+            return
+        case .targetNotRunning:
+            apply(.noKeynoteDocument)
+            return
+        case .error(let status):
+            apply(
+                .automationError,
+                errorMessage: "Keynote automation failed with status \(status)."
+            )
+            return
+        }
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        do {
+            let runtimeStatus = try await keynoteStatusService.currentStatus()
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            if runtimeStatus.hasOpenDocuments && runtimeStatus.isPlaying {
+                apply(.keynoteSlideshowActive)
+            } else if runtimeStatus.hasOpenDocuments {
+                apply(.keynoteDocumentOpen)
+            } else {
+                apply(.noKeynoteDocument)
+            }
+        } catch is CancellationError {
+            return
+        } catch KeynoteStatusError.keynoteUnavailable {
+            apply(
+                .keynoteUnavailable,
+                errorMessage: "Keynote is not installed on this Mac."
+            )
+        } catch {
+            apply(
+                .automationError,
+                errorMessage: error.localizedDescription
+            )
+        }
+    }
+
+    func openSelectedKeynoteFile() async {
+        await openSelectedKeynoteFile(requestID: nil)
+    }
+
+    private func openSelectedKeynoteFile(requestID: UUID?) async {
+        defer {
+            clearOpenFileTaskIfCurrent(requestID: requestID)
+        }
+
+        do {
+            let didOpenFile = try await keynoteFileOpener.openKeynoteFile()
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            if didOpenFile {
+                await refreshSessionStatus()
+            }
+        } catch is CancellationError {
+            return
+        } catch KeynoteFileOpenError.keynoteUnavailable {
+            apply(
+                .keynoteUnavailable,
+                errorMessage: "Keynote is not installed on this Mac."
+            )
+        } catch {
+            apply(
+                .openFileFailed,
+                errorMessage: error.localizedDescription
+            )
+        }
+    }
+
+    private func clearOpenFileTaskIfCurrent(requestID: UUID?) {
+        guard let requestID else {
+            return
+        }
+
+        if openFileRequestID == requestID {
+            openFileTask = nil
+            openFileRequestID = nil
+        }
+    }
+
+    private func apply(
+        _ status: HomeSessionStatus,
+        errorMessage: String? = nil
+    ) {
+        sessionStatus = status
+        state = status.visibleState(preserving: state)
+        self.errorMessage = status.isTechnicalFailure ? errorMessage : nil
+    }
 }
