@@ -3,22 +3,13 @@
 //  KeynoteCompanionMacos
 //
 
+import Foundation
 import Combine
 
 final class HomeViewModel: ObservableObject {
-    @Published var state: HomeViewState
+    @Published var title: String = "Home"
 
-    init(state: HomeViewState = .permissionMissing) {
-        self.state = state
+    func loadData() {
+        // Placeholder untuk business logic Home.
     }
-
-    func showHelp() {}
-
-    func openSettings() {}
-
-    func showActivities() {}
-
-    func openKeynoteFile() {}
-
-    func recordPractice() {}
 }
