@@ -12,8 +12,7 @@ struct OnboardingRouteBuilder {
     static func build(_ route: OnboardingRoute) -> some View {
         switch route {
         case .main:
-            OnboardingView()
+            OnboardingView(viewModel: OnboardingViewModel())
         }
     }
 }
-

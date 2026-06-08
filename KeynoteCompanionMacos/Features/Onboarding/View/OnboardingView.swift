@@ -10,13 +10,11 @@ import SwiftUI
 struct OnboardingView: View {
 
     @EnvironmentObject private var route: AppRouter
-    @AppStorage(OnboardingDefaults.hasCompletedOnboardingKey)
-    private var hasCompletedOnboarding = false
-    private let features: [OnboardingFeature] = [
-        .speechRate,
-        .fillerWords,
-        .insights,
-    ]
+    @StateObject private var viewModel: OnboardingViewModel
+
+    init(viewModel: OnboardingViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -39,7 +37,7 @@ struct OnboardingView: View {
             .padding(.top, Metrics.titleTopPadding)
 
             VStack(alignment: .leading, spacing: Metrics.featureSpacing) {
-                ForEach(features) { feature in
+                ForEach(viewModel.features) { feature in
                     OnboardingFeatureRow(feature: feature)
                 }
             }
@@ -65,7 +63,7 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
-        hasCompletedOnboarding = true
+        viewModel.completeOnboarding()
         route.popToRoot()
     }
 
@@ -116,5 +114,4 @@ private struct OnboardingFeatureRow: View {
         )
     }
 }
-
 
