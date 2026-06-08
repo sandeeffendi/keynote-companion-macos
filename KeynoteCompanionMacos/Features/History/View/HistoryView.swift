@@ -13,6 +13,7 @@ struct HistoryView: View {
     @StateObject var viewModel = HistoryViewModel()
     @Query(sort: \HistoryModel.date, order: .reverse) var sessions: [HistoryModel]
     @State private var sessionDelete: HistoryModel? = nil
+    @State private var historyToDetail: Bool = false
 
     private var header: some View {
         HStack {
@@ -57,7 +58,7 @@ struct HistoryView: View {
                         .padding(.bottom, 4)
 
                     ForEach(group.sessions) { session in
-                        SessionRow(session: session)
+                        SessionRow(session: session, historyToDetail: $historyToDetail)
                     }
                 }
                 .padding(16)
@@ -83,6 +84,7 @@ struct HistoryView: View {
 struct SessionRow: View {
     @EnvironmentObject private var route: AppRouter
     let session: HistoryModel
+    @Binding var historyToDetail: Bool
 
     var body: some View {
         HStack {
@@ -102,11 +104,11 @@ struct SessionRow: View {
                         .font(.title2)
                     Button {
                         route.pop()
-                        route.push(.recap(.main))
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 22))
-                    }
+                            route.push(.recap(.fromHistory))
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 22))
+                        }
                     .cornerRadius(100)
                     .buttonStyle(.plain)
                     .padding(.leading, 10)
