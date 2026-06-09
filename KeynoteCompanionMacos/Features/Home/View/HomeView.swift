@@ -46,7 +46,7 @@ struct HomeView: View {
         .background(Color.clear)
         .task {
             await viewModel.observeSession()
-        }
+        }.navigationBarBackButtonHidden()
     }
 
     private func openSettings() {
@@ -56,6 +56,6 @@ struct HomeView: View {
 
     private func showActivities() {
         viewModel.showActivities()
-        router.push(.recap(.main))
+        router.push(.history(.main))
     }
 }
