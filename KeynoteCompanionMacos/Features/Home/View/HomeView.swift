@@ -14,6 +14,30 @@ struct HomeView: View {
     }
 
     var body: some View {
+        homeContent
+            .background(
+                SlideshowOverlayWindowPresenter(
+                    isActive: viewModel.state.isKeynoteOverlayActive,
+                    size: CGSize(
+                        width: AppSize.homeWindowWidth,
+                        height: AppSize.homeWindowHeight
+                    )
+                ) {
+                    AppWindowSurface(
+                        width: AppSize.homeWindowWidth,
+                        height: AppSize.homeWindowHeight
+                    ) {
+                        homeContent
+                    }
+                }
+            )
+            .task {
+                await viewModel.observeSession()
+            }
+            .navigationBarBackButtonHidden()
+    }
+
+    private var homeContent: some View {
         VStack(spacing: 0) {
             HomeHeaderView {
                 viewModel.showHelp()
@@ -44,9 +68,6 @@ struct HomeView: View {
             height: AppSize.homeWindowHeight
         )
         .background(Color.clear)
-        .task {
-            await viewModel.observeSession()
-        }.navigationBarBackButtonHidden()
     }
 
     private func openSettings() {
@@ -58,7 +79,7 @@ struct HomeView: View {
         viewModel.showActivities()
         router.push(.history(.main))
     }
-    
+
     private func showRecap() {
         viewModel.showRecap()
         router.push(.recap(.main))
