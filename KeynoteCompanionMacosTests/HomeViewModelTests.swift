@@ -52,6 +52,15 @@ final class HomeViewModelTests: XCTestCase {
         )
     }
 
+    func testOverlayOnlyActivatesForKeynoteSlideshowActiveState() {
+        for state in HomeViewState.allCases {
+            XCTAssertEqual(
+                state.isKeynoteOverlayActive,
+                state == .keynoteSlideshowActive
+            )
+        }
+    }
+
     func testOpenFileCancelLeavesStateUnchanged() async {
         let viewModel = makeViewModel(
             keynoteStatuses: [

@@ -85,4 +85,13 @@ extension HomeViewState {
             return false
         }
     }
+
+    var isKeynoteOverlayActive: Bool {
+        switch self {
+        case .keynoteSlideshowActive:
+            return true
+        case .permissionMissing, .noKeynoteFileOpen, .noKeynoteSlideshowActive:
+            return false
+        }
+    }
 }

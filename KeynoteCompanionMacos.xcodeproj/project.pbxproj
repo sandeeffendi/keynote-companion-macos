@@ -386,7 +386,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z6ATD2M2J2;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -402,8 +402,8 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -437,7 +437,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z6ATD2M2J2;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -453,8 +453,8 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
