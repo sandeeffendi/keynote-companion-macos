@@ -17,7 +17,7 @@ struct HomeView: View {
         homeContent
             .background(
                 SlideshowOverlayWindowPresenter(
-                    isActive: viewModel.state.isKeynoteOverlayActive,
+                    isActive: shouldShowSlideshowOverlay,
                     size: CGSize(
                         width: AppSize.homeWindowWidth,
                         height: AppSize.homeWindowHeight
@@ -68,6 +68,10 @@ struct HomeView: View {
             height: AppSize.homeWindowHeight
         )
         .background(Color.clear)
+    }
+
+    private var shouldShowSlideshowOverlay: Bool {
+        viewModel.state.isKeynoteOverlayActive && router.isShowingHomeRoute
     }
 
     private func openSettings() {

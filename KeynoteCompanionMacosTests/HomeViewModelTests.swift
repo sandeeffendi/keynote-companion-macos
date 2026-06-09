@@ -61,6 +61,12 @@ final class HomeViewModelTests: XCTestCase {
         }
     }
 
+    func testRouteHelperTreatsRootAndHomeRouteAsShowingHome() {
+        XCTAssertTrue(AppRoute.isHomeRoute(nil))
+        XCTAssertTrue(AppRoute.isHomeRoute(.home(.main)))
+        XCTAssertFalse(AppRoute.isHomeRoute(.recap(.main)))
+    }
+
     func testOpenFileCancelLeavesStateUnchanged() async {
         let viewModel = makeViewModel(
             keynoteStatuses: [
