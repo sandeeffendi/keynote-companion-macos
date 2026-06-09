@@ -216,20 +216,21 @@ struct RecapView: View {
 
             Spacer()
 
-            Button {
-                route.pop()
-                route.push(.home(.main))
-            } label: {
-                Text("Record New Practice")
-                    .font(.system(size: 17))
-                    .foregroundColor(.white)
-                    .frame(width: 194, height: 48)
-            }
-            .background(Color.black)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            
+            PillButton(
+                title: "Record New Practice",
+                role: .primary,
+                action: navigateToHome
+            )
             .popoverTip(newTip)
         }
     }
+    
+    private func navigateToHome() {
+        route.pop()
+        route.push(.home(.main))
+    }
+
 }
 
 #Preview {
