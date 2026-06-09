@@ -51,6 +51,10 @@ struct RootView: View {
         if isShowingRecap {
             return AppSize.recapWindowWidth
         }
+        
+        if isShowingHistory {
+            return AppSize.recapWindowWidth
+        }
 
         return AppSize.homeWindowWidth
     }
@@ -65,6 +69,10 @@ struct RootView: View {
         }
 
         if isShowingRecap {
+            return AppSize.recapWindowHeight
+        }
+        
+        if isShowingHistory {
             return AppSize.recapWindowHeight
         }
         
@@ -105,6 +113,12 @@ struct RootView: View {
     
     private var isShowingRecap: Bool {
         if case .recap = router.activeRoute {
+            return true
+        }
+        return false
+    }
+    private var isShowingHistory: Bool {
+        if case .history = router.activeRoute {
             return true
         }
 

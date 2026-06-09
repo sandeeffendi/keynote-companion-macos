@@ -18,6 +18,7 @@ struct RecapView: View {
     let saveTip = SaveSessionTip()
     let newTip = NewSessionTip()
     @State private var saveToHistory: Bool = false
+    @State private var showSavedToast: Bool = false
 
     // Audio player state
     @State private var isPlaying: Bool = false
@@ -34,33 +35,60 @@ struct RecapView: View {
     var body: some View {
         let _ = print("isFromHistory: \(isFromHistory)")
         VStack(alignment: .leading, spacing: 0) {
+            RecapHeaderView {}
             header
                 .padding(.bottom, 20)
-
+            
             Divider()
                 .padding(.bottom, 20)
-
+            
             audioPlayer
                 .padding(.bottom, 20)
-
+            
             feedbackCards
                 .padding(.bottom, 20)
-
+            
             Spacer()
-
-            footer
+            if !isFromHistory {
+                footer
+            }
         }
         .frame(alignment: .leading)
         .padding(24)
         .navigationTitle("Tiempo")
-        .navigationBarBackButtonHidden(!isFromHistory).onAppear {
-            print("isFromHistory: \(isFromHistory)")
-        }}
+        .navigationBarBackButtonHidden().overlay(alignment: .bottom) {
+            if showSavedToast {
+                Text("This session already saved to history")
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.1))
+                    .clipShape(Capsule())
+                    .padding(.leading)
+                    .padding(.bottom, 80)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut, value: showSavedToast)
+            }
+        }
+        
+        
+    }
 
-    // MARK: - Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if isFromHistory {
+                Button {
+                    route.pop()
+                    route.push(.history(.main))
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 24))
+                        .frame(width: 36, height: 36)
+                }
+                .clipShape(Circle()).padding(.bottom,12)
+            }
             Text(viewModel.recapData.sesTitle)
                 .font(.largeTitle.bold())
 
@@ -81,8 +109,7 @@ struct RecapView: View {
         }
     }
 
-    // MARK: - Audio Player
-
+    // Audio Player
     private var audioPlayer: some View {
         HStack(spacing: 12) {
             Button {
@@ -147,7 +174,7 @@ struct RecapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Feedback Cards
+    // Feedback Cards
 
     private var feedbackCards: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -161,14 +188,19 @@ struct RecapView: View {
         }
     }
 
-    // MARK: - Footer
+    // Footer
 
     private var footer: some View {
         HStack {
             Button {
-                guard !saveToHistory else { return }
-                viewModel.saveRecap(context: modelContext)
-                saveToHistory = true
+                if !saveToHistory {
+                    viewModel.saveRecap(context: modelContext)
+                    saveToHistory = true
+                }
+                showSavedToast = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    showSavedToast = false
+                }
             } label: {
                 Image(systemName: saveToHistory ? "bookmark.fill" : "bookmark")
                     .font(.system(size: 20))
@@ -193,7 +225,7 @@ struct RecapView: View {
                     .foregroundColor(.white)
                     .frame(width: 194, height: 48)
             }
-            .background(Color.accentColor)
+            .background(Color.black)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .popoverTip(newTip)
         }
@@ -201,6 +233,6 @@ struct RecapView: View {
 }
 
 #Preview {
-    RecapView(isFromHistory: false, viewModel: RecapViewModel())
+    RecapView(isFromHistory: true, viewModel: RecapViewModel())
 }
 

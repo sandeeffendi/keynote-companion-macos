@@ -16,35 +16,38 @@ struct HistoryView: View {
     @State private var historyToDetail: Bool = false
 
     private var header: some View {
-        HStack {
-            Button {
-                route.pop()
-                route.push(.home(.main))
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 24))
-                    .frame(width: 36, height: 36)
-            }
-            .clipShape(Circle())
-
+        VStack{
+            RecapHeaderView {}
             HStack {
-                Button {} label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20))
+                Button {
+                    route.pop()
+                    route.push(.home(.main))
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 24))
+                        .frame(width: 36, height: 36)
                 }
                 .clipShape(Circle())
-                .buttonStyle(PlainButtonStyle())
-                .padding(.leading, 10)
 
-                TextField("Search", text: .constant(""))
-                    .padding(.trailing, 10)
-                    .textFieldStyle(.plain)
+                HStack {
+                    Button {} label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 20))
+                    }
+                    .clipShape(Circle())
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.leading, 10)
+
+                    TextField("Search", text: .constant(""))
+                        .padding(.trailing, 10)
+                        .textFieldStyle(.plain)
+                }
+                .frame(maxWidth: .infinity, minHeight: 42)
+                .background(Color(.sRGB, red: 0.8, green: 0.8, blue: 0.8, opacity: 0.2))
+                .cornerRadius(100)
+
+                Spacer()
             }
-            .frame(maxWidth: .infinity, minHeight: 42)
-            .background(Color(.sRGB, red: 0.8, green: 0.8, blue: 0.8, opacity: 0.2))
-            .cornerRadius(100)
-
-            Spacer()
         }
     }
 
@@ -74,7 +77,6 @@ struct HistoryView: View {
             }
             Spacer()
         }
-        .frame(maxWidth: 560, minHeight: 700, alignment: .leading)
         .padding(24)
         .navigationTitle("Tiempo")
         .navigationBarBackButtonHidden()

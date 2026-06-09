@@ -22,7 +22,7 @@ struct KeynoteCompanionMacosApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(router)
-                .modelContainer(for: HistoryModel.self)
+                .modelContainer(for: [HistoryModel.self, HistoryFeedback.self])
                 .preferredColorScheme(.light)
         }
         .defaultSize(
