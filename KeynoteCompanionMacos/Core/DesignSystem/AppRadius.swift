@@ -7,7 +7,7 @@
 
 import Foundation
 
-// PIC: Dina
+//Dina
 extension CGFloat {
     // Buttons
     static let btnCircle: CGFloat = 100
@@ -15,8 +15,10 @@ extension CGFloat {
 
     // Card
     static let card: CGFloat = 8
+    static let bgFeedback: CGFloat = 16
 }
 
+//sande
 // App size token
 enum AppSize {
     static let splashWindowWidth: CGFloat = 300
@@ -39,6 +41,9 @@ enum AppSize {
     static let footerSeparatorHeight: CGFloat = 16
     static let footerButtonHeight: CGFloat = 38
     static let mainCTAHeight: CGFloat = 40
+    
+    static let recapWindowWidth: CGFloat = 560
+    static let recapWindowHeight: CGFloat = 700
 }
 
 // App radius token

@@ -7,22 +7,77 @@
 
 import Combine
 import Foundation
-import SwiftUI
+import SwiftData
 
 final class RecapViewModel: ObservableObject {
     @Published var recapData: RecapModel
 
     init(
         recapData: RecapModel = RecapModel(
-            title: "Ini adalah recap screen",
-            subTitle: "PIC: Dina"
+            sesTitle: "Practice Recording 1",
+            sesKeynote: "HIG Reading Materials",
+            date: "Monday, 17 August 1945",
+            time: "10:00",
+            duration: "00:05:00",
+            feedback: [
+                Feedback(
+                    title: "Speaking Pace",
+                    overall: 152,
+                    unit: "WPM",
+                    tips: "On slide 5, your speaking pace was quite fast. Try slowing down.",
+                    subTitle: "Your average pace is slightly fast",
+                    category: "WPM",
+                    perSlide: [
+                        Slide(no: 1, value: 120, timestamp: 0),
+                        Slide(no: 2, value: 145, timestamp: 63.0),
+                        Slide(no: 3, value: 100, timestamp: 130.5)
+                    ]
+                ),
+                Feedback(
+                    title: "Filler Words",
+                    overall: 60,
+                    unit: "words",
+                    tips: "On slide 5, you used 15 filler words. Try pausing between sentences.",
+                    subTitle: "You used quite a lot of filler words",
+                    category: "Filler",
+                    perSlide: [
+                        Slide(no: 1, value: 120, timestamp: 0),
+                        Slide(no: 2, value: 145, timestamp: 63.0),
+                        Slide(no: 3, value: 100, timestamp: 130.5)
+                    ]
+                )
+            ]
         )
     ) {
         self.recapData = recapData
     }
 
-    func loadRecapData() {
-        // ini adalha function placeholder untuk viewmodel recap data
-    }
+    func saveRecap(context: ModelContext) {
+        print("saving recap...")
 
+        let historyFeedbacks = recapData.feedback.map { feedback in
+            HistoryFeedback(
+                title: feedback.title,
+                overall: feedback.overall,
+                unit: feedback.unit,
+                tips: feedback.tips,
+                subTitle: feedback.subTitle,
+                category: feedback.category,
+                perSlide: feedback.perSlide
+            )
+        }
+
+        let recap = HistoryModel(
+            sesTitle: recapData.sesTitle,
+            sesKeynote: recapData.sesKeynote,
+            date: recapData.date,
+            time: recapData.time,
+            duration: recapData.duration,
+            feedbacks: historyFeedbacks
+        )
+
+        context.insert(recap)
+        try? context.save()
+        print("saved: \(recap.sesTitle)")
+    }
 }

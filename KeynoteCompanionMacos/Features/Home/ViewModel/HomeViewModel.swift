@@ -3,6 +3,7 @@
 //  KeynoteCompanionMacos
 //
 
+import Foundation
 import Combine
 import Foundation
 
