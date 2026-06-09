@@ -93,7 +93,7 @@ struct HomeView: View {
         .background(Color.clear)
         .task {
             await viewModel.observeSession()
-        }
+        }.navigationBarBackButtonHidden()
     }
 
     private var shouldShowSlideshowOverlay: Bool {

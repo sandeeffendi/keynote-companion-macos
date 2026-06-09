@@ -18,6 +18,7 @@ struct RecapView: View {
     let saveTip = SaveSessionTip()
     let newTip = NewSessionTip()
     @State private var saveToHistory: Bool = false
+    @State private var showSavedToast: Bool = false
 
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
@@ -68,7 +69,6 @@ struct RecapView: View {
         }
     }
 
-    // MARK: - Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -344,7 +344,7 @@ struct RecapView: View {
         .frame(height: 20)
     }
 
-    // MARK: - Footer
+    // Footer
 
     private var footer: some View {
         HStack {

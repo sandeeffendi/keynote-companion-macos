@@ -51,6 +51,10 @@ struct RootView: View {
         if isShowingRecap {
             return AppSize.recapWindowWidth
         }
+        
+        if isShowingHistory {
+            return AppSize.recapWindowWidth
+        }
 
         return AppSize.homeWindowWidth
     }
@@ -65,6 +69,10 @@ struct RootView: View {
         }
 
         if isShowingRecap {
+            return AppSize.recapWindowHeight
+        }
+        
+        if isShowingHistory {
             return AppSize.recapWindowHeight
         }
         
