@@ -5,7 +5,6 @@
 //  Created by Sande Effendi on 26/05/26.
 //
 
-import AppKit
 import SwiftUI
 import SwiftData
 
@@ -15,9 +14,10 @@ struct KeynoteCompanionMacosApp: App {
     private let persistence = PersistenceController.shared
 
     init() {
-        NSApplication.shared.appearance = NSAppearance(named: .aqua)
+        try? Tips.resetDatastore()
+        try? Tips.configure()
     }
-
+    
     var body: some Scene {
         WindowGroup {
             RootView()

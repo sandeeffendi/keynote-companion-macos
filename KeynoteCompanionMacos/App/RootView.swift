@@ -47,6 +47,10 @@ struct RootView: View {
         if isShowingOnboarding {
             return AppSize.onboardingWindowWidth
         }
+        
+        if isShowingRecap {
+            return AppSize.recapWindowWidth
+        }
 
         return AppSize.homeWindowWidth
     }
@@ -60,6 +64,10 @@ struct RootView: View {
             return AppSize.onboardingWindowHeight
         }
 
+        if isShowingRecap {
+            return AppSize.recapWindowHeight
+        }
+        
         return AppSize.homeWindowHeight
     }
 

@@ -14,6 +14,10 @@ struct RecapView: View {
     @EnvironmentObject private var route: AppRouter
     var isFromHistory: Bool
     @StateObject private var viewModel: RecapViewModel
+    @Environment(\.modelContext) private var modelContext
+    let saveTip = SaveSessionTip()
+    let newTip = NewSessionTip()
+    @State private var saveToHistory: Bool = false
 
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
