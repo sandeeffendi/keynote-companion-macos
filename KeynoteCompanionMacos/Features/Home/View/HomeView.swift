@@ -33,7 +33,7 @@ struct HomeView: View {
                 isRecordEnabled: viewModel.state.isRecordEnabled,
                 onOpenSettingsTapped: openSettings,
                 onActivitiesTapped: showActivities,
-                onRecordPracticeTapped: viewModel.recordPractice
+                onRecordPracticeTapped: showRecap
             )
         }
         .padding(.horizontal, AppSpacing.xl)
@@ -57,5 +57,10 @@ struct HomeView: View {
     private func showActivities() {
         viewModel.showActivities()
         router.push(.history(.main))
+    }
+    
+    private func showRecap() {
+        viewModel.showRecap()
+        router.push(.recap(.main))
     }
 }

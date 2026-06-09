@@ -74,6 +74,8 @@ final class HomeViewModel: ObservableObject {
     func openSettings() {}
 
     func showActivities() {}
+    
+    func showRecap() {}
 
     func openKeynoteFile() {
         openFileTask?.cancel()

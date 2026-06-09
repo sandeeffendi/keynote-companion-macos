@@ -225,7 +225,7 @@ struct RecapView: View {
                     .foregroundColor(.white)
                     .frame(width: 194, height: 48)
             }
-            .background(Color.primary.opacity(0.8))
+            .background(Color.black)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .popoverTip(newTip)
         }
