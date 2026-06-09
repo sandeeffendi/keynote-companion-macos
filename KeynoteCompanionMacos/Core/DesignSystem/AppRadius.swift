@@ -44,7 +44,6 @@ enum AppSize {
     
     static let recapWindowWidth: CGFloat = 560
     static let recapWindowHeight: CGFloat = 732
-    static let recapWindowHeight: CGFloat = 700
 }
 
 // App radius token
