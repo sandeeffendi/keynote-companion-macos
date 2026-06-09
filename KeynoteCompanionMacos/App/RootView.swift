@@ -121,6 +121,7 @@ struct RootView: View {
         if case .history = router.activeRoute {
             return true
         }
+
         return false
     }
 }
