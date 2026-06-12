@@ -28,6 +28,10 @@ enum AppColor {
     static let trafficMinimize = Color(red: 1.00, green: 0.75, blue: 0.18)
     static let trafficZoom = Color(red: 0.20, green: 0.80, blue: 0.34)
     static let trafficSymbol = Color.black.opacity(0.58)
+
+    static let wpmSlow = Color(red: 1.00, green: 0.75, blue: 0.18)   // < 90 WPM
+    static let wpmGood = Color(red: 0.20, green: 0.75, blue: 0.34)   // 90–120 WPM
+    static let wpmFast = Color(red: 1.00, green: 0.27, blue: 0.23)   // > 120 WPM
 }
 
 

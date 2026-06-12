@@ -11,10 +11,10 @@ struct RecapRouteBuilder {
     @ViewBuilder
     static func build(_ route: RecapRoute) -> some View {
         switch route {
-        case .main:
-            RecapView(isFromHistory: false, viewModel: RecapViewModel())
-        case .fromHistory:
-            RecapView(isFromHistory: true, viewModel: RecapViewModel())
+        case .main(let recapModel):
+            RecapView(isFromHistory: false, viewModel: RecapViewModel(recapData: recapModel))
+        case .fromHistory(let recapModel):
+            RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: recapModel))
         case .home:
             HomeView(viewModel: HomeViewModel())
         }

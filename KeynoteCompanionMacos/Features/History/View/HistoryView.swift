@@ -106,7 +106,7 @@ struct SessionRow: View {
                         .font(.title2)
                     Button {
                         route.pop()
-                            route.push(.recap(.fromHistory))
+                            route.push(.recap(.fromHistory(session.toRecapModel())))
                         } label: {
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 22))

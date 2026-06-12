@@ -9,6 +9,7 @@ import Foundation
 struct KeynoteRuntimeStatus: Equatable, Sendable {
     let hasOpenDocuments: Bool
     let isPlaying: Bool
+    let documentName: String
 }
 
 enum KeynoteStatusError: LocalizedError, Sendable {
@@ -45,7 +46,7 @@ actor KeynoteStatusService: KeynoteStatusChecking {
         }
 
         guard let bundleIdentifier = await appResolver.resolvedRunningBundleIdentifier() else {
-            return KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false)
+            return KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: "")
         }
 
         return try runStatusScript(bundleIdentifier: bundleIdentifier)
@@ -58,8 +59,12 @@ actor KeynoteStatusService: KeynoteStatusChecking {
         tell application id "\(bundleIdentifier)"
             set documentCount to count of documents
             set slideshowPlaying to playing
+            set docName to ""
+            if documentCount > 0 then
+                set docName to name of document 1
+            end if
         end tell
-        return {documentCount, slideshowPlaying}
+        return {documentCount, slideshowPlaying, docName}
         """
 
         guard let script = NSAppleScript(source: source) else {
@@ -80,9 +85,12 @@ actor KeynoteStatusService: KeynoteStatusChecking {
             throw KeynoteStatusError.invalidAppleScriptResult
         }
 
+        let documentName = result.atIndex(3)?.stringValue ?? ""
+
         return KeynoteRuntimeStatus(
             hasOpenDocuments: countDescriptor.int32Value > 0,
-            isPlaying: playingDescriptor.booleanValue
+            isPlaying: playingDescriptor.booleanValue,
+            documentName: documentName
         )
     }
 }

@@ -26,11 +26,19 @@ extension PermissionItem {
         description: "For detecting your speech rate, if needed",
         permissionType: .wpmPlaceholder
     )
+
+    nonisolated static let speechRecognition = PermissionItem(
+        icon: AppIcon.permissionWPMDetector,
+        title: "Allow Speech Recognition",
+        description: "For measuring your live words-per-minute",
+        permissionType: .speechRecognition
+    )
 }
 
 enum PermissionType: Sendable {
     case microphone
     case keynoteAutomation
+    case speechRecognition
     case wpmPlaceholder
 }
 

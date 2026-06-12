@@ -13,6 +13,7 @@ final class SettingsViewModel: ObservableObject {
 
     @Published var settingsData: SettingsModel
     private let automationPermissionService: KeynoteAutomationPermissionChecking
+    private let speechPermissionService: SpeechRecognitionPermissionChecking
     private var automationRefreshTask: Task<Void, Never>?
     private var automationRefreshRequestID: UUID?
 
@@ -22,12 +23,13 @@ final class SettingsViewModel: ObservableObject {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector,
+                    .speechRecognition,
                 ]
             ),
             automationPermissionService: KeynoteAutomationPermissionService(
                 appResolver: KeynoteAppResolver()
-            )
+            ),
+            speechPermissionService: SpeechRecognitionPermissionService()
         )
     }
 
@@ -37,13 +39,15 @@ final class SettingsViewModel: ObservableObject {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector,
+                    .speechRecognition,
                 ]
             ),
-        automationPermissionService: KeynoteAutomationPermissionChecking
+        automationPermissionService: KeynoteAutomationPermissionChecking,
+        speechPermissionService: SpeechRecognitionPermissionChecking
     ) {
         self.settingsData = settingsData
         self.automationPermissionService = automationPermissionService
+        self.speechPermissionService = speechPermissionService
         refreshAllPermissionStatuses()
     }
 
@@ -57,6 +61,8 @@ final class SettingsViewModel: ObservableObject {
             return microphoneStatus()
         case .keynoteAutomation:
             return storedStatus(for: type)
+        case .speechRecognition:
+            return speechPermissionService.authorizationStatus()
         case .wpmPlaceholder:
             return .denied
         }
@@ -92,6 +98,8 @@ final class SettingsViewModel: ObservableObject {
             return currentStatus(for: type) == .authorized
         case .keynoteAutomation:
             return storedStatus(for: type) == .authorized
+        case .speechRecognition:
+            return currentStatus(for: type) == .authorized
         case .wpmPlaceholder:
             return false
         }
@@ -103,6 +111,8 @@ final class SettingsViewModel: ObservableObject {
             toggleMicrophonePermission(newValue: newValue)
         case .keynoteAutomation:
             toggleKeynoteAutomationPermission(newValue: newValue)
+        case .speechRecognition:
+            toggleSpeechRecognitionPermission(newValue: newValue)
         case .wpmPlaceholder:
             setPermissionEnabled(false, for: type)
         }
@@ -138,6 +148,14 @@ final class SettingsViewModel: ObservableObject {
                     self?.refreshAllPermissionStatuses()
                 }
             }
+        case .speechRecognition:
+            let service = speechPermissionService
+            Task { [weak self] in
+                _ = await service.requestPermission()
+                await MainActor.run { [weak self] in
+                    self?.refreshAllPermissionStatuses()
+                }
+            }
         case .keynoteAutomation, .wpmPlaceholder:
             break
         }
@@ -152,6 +170,9 @@ final class SettingsViewModel: ObservableObject {
         case .keynoteAutomation:
             urlString =
                 "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+        case .speechRecognition:
+            urlString =
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
         case .wpmPlaceholder:
             return
         }
@@ -173,6 +194,28 @@ final class SettingsViewModel: ObservableObject {
         }
 
         settingsData.permissionItems[index].isEnabled = isEnabled
+    }
+
+    private func toggleSpeechRecognitionPermission(newValue: Bool) {
+        let status = currentStatus(for: .speechRecognition)
+
+        if newValue {
+            switch status {
+            case .notDetermined:
+                requestPermission(for: .speechRecognition)
+            case .denied:
+                setPermissionEnabled(false, for: .speechRecognition)
+                openSystemSettings(for: .speechRecognition)
+            case .authorized:
+                setPermissionEnabled(true, for: .speechRecognition)
+            }
+        } else {
+            setPermissionEnabled(status == .authorized, for: .speechRecognition)
+
+            if status == .authorized {
+                openSystemSettings(for: .speechRecognition)
+            }
+        }
     }
 
     private func toggleKeynoteAutomationPermission(newValue: Bool) {

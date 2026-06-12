@@ -5,6 +5,7 @@
 //  Created by Sande Effendi on 04/06/26.
 //
 
+import AVFoundation
 import Foundation
 import SwiftUI
 import TipKit
@@ -20,11 +21,7 @@ struct RecapView: View {
     @State private var saveToHistory: Bool = false
     @State private var showSavedToast: Bool = false
 
-    // Audio player state
-    @State private var isPlaying: Bool = false
     @State private var isMuted: Bool = false
-    @State private var playbackProgress: Double = 0.0
-    @State private var totalDuration: TimeInterval = 300.0
 
     
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
@@ -113,26 +110,13 @@ struct RecapView: View {
     private var audioPlayer: some View {
         HStack(spacing: 12) {
             Button {
-                // TODO: rewind
+                viewModel.togglePlayback()
             } label: {
-                Image(systemName: "backward.fill")
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                isPlaying.toggle()
-            } label: {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                     .font(.title3)
             }
             .buttonStyle(.plain)
-
-            Button {
-                // TODO: forward
-            } label: {
-                Image(systemName: "forward.fill")
-            }
-            .buttonStyle(.plain)
+            .disabled(!viewModel.hasAudio)
 
             // Scrubber
             GeometryReader { geo in
@@ -142,17 +126,18 @@ struct RecapView: View {
                         .frame(height: 4)
 
                     Capsule()
-                        .fill(Color.primary)
-                        .frame(width: geo.size.width * playbackProgress, height: 4)
+                        .fill(viewModel.hasAudio ? Color.primary : Color.secondary.opacity(0.4))
+                        .frame(width: geo.size.width * viewModel.playbackProgress, height: 4)
 
                     Circle()
-                        .fill(Color.primary)
+                        .fill(viewModel.hasAudio ? Color.primary : Color.secondary.opacity(0.4))
                         .frame(width: 12, height: 12)
-                        .offset(x: geo.size.width * playbackProgress - 6)
+                        .offset(x: geo.size.width * viewModel.playbackProgress - 6)
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
-                                    playbackProgress = min(max(value.location.x / geo.size.width, 0), 1)
+                                    let progress = min(max(value.location.x / geo.size.width, 0), 1)
+                                    viewModel.seekByProgress(progress)
                                 }
                         )
                 }
@@ -162,16 +147,21 @@ struct RecapView: View {
 
             Button {
                 isMuted.toggle()
+                viewModel.audioPlayer?.volume = isMuted ? 0 : 1
             } label: {
                 Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.slash")
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .disabled(!viewModel.hasAudio)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.secondary.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .task {
+            viewModel.configureAudioPlayer()
+        }
     }
 
     // Feedback Cards
@@ -179,11 +169,10 @@ struct RecapView: View {
     private var feedbackCards: some View {
         HStack(alignment: .top, spacing: 12) {
             ForEach(viewModel.recapData.feedback, id: \.category) { feedback in
-                RecapCardView(feedback: feedback){
-                    timestamp in
-                        playbackProgress = totalDuration > 0 ? timestamp / totalDuration : 0
+                RecapCardView(feedback: feedback) { timestamp in
+                    viewModel.seek(to: timestamp)
                 }
-                    .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
             }
         }
     }

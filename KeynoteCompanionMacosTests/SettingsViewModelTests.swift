@@ -38,10 +38,11 @@ final class SettingsViewModelTests: XCTestCase {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector
+                    .speechRecognition
                 ]
             ),
-            automationPermissionService: service
+            automationPermissionService: service,
+            speechPermissionService: StubSpeechRecognitionPermissionService()
         )
 
         await service.waitForPendingRequestCount(1)
@@ -66,10 +67,11 @@ final class SettingsViewModelTests: XCTestCase {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector
+                    .speechRecognition
                 ]
             ),
-            automationPermissionService: service
+            automationPermissionService: service,
+            speechPermissionService: StubSpeechRecognitionPermissionService()
         )
 
         await waitUntil {
@@ -136,6 +138,22 @@ private actor RecordingAutomationPermissionService:
 
     func promptRequests() -> [Bool] {
         prompts
+    }
+}
+
+private struct StubSpeechRecognitionPermissionService: SpeechRecognitionPermissionChecking {
+    let status: PermissionStatus
+
+    init(status: PermissionStatus = .notDetermined) {
+        self.status = status
+    }
+
+    func authorizationStatus() -> PermissionStatus {
+        status
+    }
+
+    func requestPermission() async -> PermissionStatus {
+        status
     }
 }
 
