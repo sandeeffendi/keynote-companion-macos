@@ -8,10 +8,51 @@
 import Combine
 import Foundation
 import SwiftData
+import SwiftUI
 
 final class RecapViewModel: ObservableObject {
     @Published var recapData: RecapModel
+    
+    //tip
+    @Published var saveToHistory: Bool = false
+    @Published var showSavedToast: Bool = false
 
+    // Audio player state
+    @Published var isPlaying: Bool = false
+    @Published var isMuted: Bool = false
+    @Published var playbackProgress: Double = 0.0
+    @Published var totalDuration: TimeInterval = 300.0
+    
+    
+    func saveRecap(context: ModelContext) {
+        print("saving recap...")
+
+        let historyFeedbacks = recapData.feedback.map { feedback in
+            HistoryFeedback(
+                title: feedback.title,
+                overall: feedback.overall,
+                unit: feedback.unit,
+                tips: feedback.tips,
+                subTitle: feedback.subTitle,
+                category: feedback.category,
+                perSlide: feedback.perSlide
+            )
+        }
+
+        let recap = HistoryModel(
+            sesTitle: recapData.sesTitle,
+            sesKeynote: recapData.sesKeynote,
+            date: recapData.date,
+            time: recapData.time,
+            duration: recapData.duration,
+            feedbacks: historyFeedbacks
+        )
+
+        context.insert(recap)
+        try? context.save()
+        print("saved: \(recap.sesTitle)")
+    }
+    
     init(
         recapData: RecapModel = RecapModel(
             sesTitle: "Practice Recording 1",
@@ -52,32 +93,5 @@ final class RecapViewModel: ObservableObject {
         self.recapData = recapData
     }
 
-    func saveRecap(context: ModelContext) {
-        print("saving recap...")
-
-        let historyFeedbacks = recapData.feedback.map { feedback in
-            HistoryFeedback(
-                title: feedback.title,
-                overall: feedback.overall,
-                unit: feedback.unit,
-                tips: feedback.tips,
-                subTitle: feedback.subTitle,
-                category: feedback.category,
-                perSlide: feedback.perSlide
-            )
-        }
-
-        let recap = HistoryModel(
-            sesTitle: recapData.sesTitle,
-            sesKeynote: recapData.sesKeynote,
-            date: recapData.date,
-            time: recapData.time,
-            duration: recapData.duration,
-            feedbacks: historyFeedbacks
-        )
-
-        context.insert(recap)
-        try? context.save()
-        print("saved: \(recap.sesTitle)")
-    }
+    
 }

@@ -17,16 +17,6 @@ struct RecapView: View {
     @Environment(\.modelContext) private var modelContext
     let saveTip = SaveSessionTip()
     let newTip = NewSessionTip()
-    @State private var saveToHistory: Bool = false
-    @State private var showSavedToast: Bool = false
-
-    // Audio player state
-    @State private var isPlaying: Bool = false
-    @State private var isMuted: Bool = false
-    @State private var playbackProgress: Double = 0.0
-    @State private var totalDuration: TimeInterval = 300.0
-
-    
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
         self.isFromHistory = isFromHistory
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -42,7 +32,7 @@ struct RecapView: View {
             Divider()
                 .padding(.bottom, 20)
             
-            audioPlayer
+            AudioPlayerView(viewModel: RecapViewModel())
                 .padding(.bottom, 20)
             
             feedbackCards
@@ -50,14 +40,14 @@ struct RecapView: View {
             
             Spacer()
             if !isFromHistory {
-                footer
+                RecapFooterView(viewModel: RecapViewModel())
             }
         }
         .frame(alignment: .leading)
         .padding(24)
         .navigationTitle("Tiempo")
         .navigationBarBackButtonHidden().overlay(alignment: .bottom) {
-            if showSavedToast {
+            if viewModel.showSavedToast {
                 Text("This session already saved to history")
                     .font(.subheadline)
                     .foregroundStyle(.white)
@@ -68,7 +58,7 @@ struct RecapView: View {
                     .padding(.leading)
                     .padding(.bottom, 80)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.easeInOut, value: showSavedToast)
+                    .animation(.easeInOut, value: viewModel.showSavedToast)
             }
         }
         
@@ -109,128 +99,18 @@ struct RecapView: View {
         }
     }
 
-    // Audio Player
-    private var audioPlayer: some View {
-        HStack(spacing: 12) {
-            Button {
-                // TODO: rewind
-            } label: {
-                Image(systemName: "backward.fill")
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                isPlaying.toggle()
-            } label: {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.title3)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                // TODO: forward
-            } label: {
-                Image(systemName: "forward.fill")
-            }
-            .buttonStyle(.plain)
-
-            // Scrubber
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 4)
-
-                    Capsule()
-                        .fill(Color.primary)
-                        .frame(width: geo.size.width * playbackProgress, height: 4)
-
-                    Circle()
-                        .fill(Color.primary)
-                        .frame(width: 12, height: 12)
-                        .offset(x: geo.size.width * playbackProgress - 6)
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    playbackProgress = min(max(value.location.x / geo.size.width, 0), 1)
-                                }
-                        )
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-            }
-            .frame(height: 20)
-
-            Button {
-                isMuted.toggle()
-            } label: {
-                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.slash")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.secondary.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-
     // Feedback Cards
-
     private var feedbackCards: some View {
         HStack(alignment: .top, spacing: 12) {
             ForEach(viewModel.recapData.feedback, id: \.category) { feedback in
                 RecapCardView(feedback: feedback){
                     timestamp in
-                        playbackProgress = totalDuration > 0 ? timestamp / totalDuration : 0
+                    viewModel.playbackProgress = viewModel.totalDuration > 0 ? timestamp / viewModel.totalDuration : 0
                 }
                     .frame(maxWidth: .infinity)
             }
         }
     }
-
-    // Footer
-
-    private var footer: some View {
-        HStack {
-            Button {
-                if !saveToHistory {
-                    viewModel.saveRecap(context: modelContext)
-                    saveToHistory = true
-                }
-                showSavedToast = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    showSavedToast = false
-                }
-            } label: {
-                Image(systemName: saveToHistory ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 20))
-                    .frame(width: 48, height: 48)
-            }
-            .background(Color.secondary.opacity(0.1))
-            .clipShape(Circle())
-            .popoverTip(saveTip) { action in
-                guard action.id == "next" else { return }
-                SaveSessionTip.doneTip = true
-                saveTip.invalidate(reason: .actionPerformed)
-            }
-
-            Spacer()
-
-            
-            PillButton(
-                title: "Record New Practice",
-                role: .primary,
-                action: navigateToHome
-            )
-            .popoverTip(newTip)
-        }
-    }
-    
-    private func navigateToHome() {
-        route.pop()
-        route.push(.home(.main))
-    }
-
 }
 
 #Preview {
