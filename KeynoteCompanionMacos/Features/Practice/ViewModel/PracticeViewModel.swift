@@ -65,14 +65,6 @@ final class PracticeViewModel: ObservableObject {
         }
     }
 
-    func retake() {
-        Task {
-            await coordinator.retakeCurrentSlide()
-            currentWPM = 0
-            wpmStatus = .good
-        }
-    }
-
     func stop() {
         timerTask?.cancel()
         observationTask?.cancel()
@@ -104,19 +96,21 @@ final class PracticeViewModel: ObservableObject {
     private func startTimer() {
         timerTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(for: PracticeTuning.liveRefreshInterval)
                 guard !Task.isCancelled, let self else { break }
 
+                // While paused the media clock is frozen; keep the indicator steady
+                // instead of recomputing against a stalled "now".
+                if self.isPaused { continue }
+
                 let elapsed = await self.coordinator.elapsedSeconds()
-                let wpm = await self.coordinator.currentWPM()
+                let wpm = await self.coordinator.sampleWPM()
                 let slide = await self.coordinator.currentSlide()
 
-                await MainActor.run {
-                    self.elapsedTime = self.formatElapsed(elapsed)
-                    self.currentWPM = wpm
-                    self.wpmStatus = WPMStatus(wpm: wpm)
-                    self.currentSlide = slide
-                }
+                self.elapsedTime = self.formatElapsed(elapsed)
+                self.currentWPM = wpm
+                self.wpmStatus = self.wpmStatus.next(for: wpm)
+                self.currentSlide = slide
             }
         }
     }

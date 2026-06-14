@@ -15,14 +15,23 @@ actor PracticeRecordingCoordinator {
     private let slideService: KeynoteSlideTracking
     private let pollingIntervalNanoseconds: UInt64
 
-    // Live session state
-    private var accumulatedWordCount: Int = 0
-    private var currentTaskWordCount: Int = 0
-    private var wordCountAtCurrentSlideStart: Int = 0
+    // Single source of truth: every recognized word becomes one timestamp (media
+    // seconds). Sorted because the media clock is monotonic and we append at "now".
+    // Feeds BOTH the live sliding window and the recap per-slide breakdown; never pruned.
+    private var history: [TimeInterval] = []
+    // Monotonic high-water mark for the CURRENT recognition task. The recognizer
+    // reports an absolute, sometimes-revised cumulative count; we only commit
+    // increases, which makes ingest order-insensitive (Task hops to the actor are
+    // not FIFO) and immune to partial-result shrink. Reset on task rotation.
+    private var maxCountCurrentTask: Int = 0
+
+    private var clock: MediaClock
+    private var wpmCalculator: WPMCalculator
+
     private var currentSlideNumber: Int = 1
-    private var sessionStartDate: Date?
-    private var currentSlideStartDate: Date?
-    private var slideSnapshots: [PracticeSlideSnapshot] = []
+    private var slideIntervals: [PracticeSlideInterval] = []
+    private var keynoteFileName: String = ""
+
     private var activeRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isSessionActive = false
 
@@ -42,12 +51,19 @@ actor PracticeRecordingCoordinator {
         audioService: AudioCapturing,
         speechService: SpeechRecognizing,
         slideService: KeynoteSlideTracking,
-        pollingIntervalNanoseconds: UInt64 = 1_000_000_000
+        pollingIntervalNanoseconds: UInt64 = 1_000_000_000,
+        clock: MediaClock = MediaClock(),
+        wpmCalculator: WPMCalculator = WPMCalculator(
+            window: PracticeTuning.windowSeconds,
+            smoothingFactor: PracticeTuning.emaAlpha
+        )
     ) {
         self.audioService = audioService
         self.speechService = speechService
         self.slideService = slideService
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
+        self.clock = clock
+        self.wpmCalculator = wpmCalculator
     }
 
     var stateStream: AsyncStream<PracticeSessionState> {
@@ -58,14 +74,12 @@ actor PracticeRecordingCoordinator {
     }
 
     func start(keynoteFileName: String) async throws {
-        let now = Date()
         isSessionActive = true
-        sessionStartDate = now
-        currentSlideStartDate = now
-        accumulatedWordCount = 0
-        currentTaskWordCount = 0
-        wordCountAtCurrentSlideStart = 0
-        slideSnapshots = []
+        self.keynoteFileName = keynoteFileName
+        beginSessionClocks()
+        history = []
+        maxCountCurrentTask = 0
+        slideIntervals = []
 
         // Detect initial slide
         let initialSlide: Int
@@ -76,11 +90,7 @@ actor PracticeRecordingCoordinator {
             initialSlide = 1
         }
         currentSlideNumber = initialSlide
-        slideSnapshots.append(PracticeSlideSnapshot(
-            slideNumber: initialSlide,
-            wordCountAtStart: 0,
-            timestampAtStart: 0
-        ))
+        slideIntervals.append(PracticeSlideInterval(slideNumber: initialSlide, start: 0, end: 0))
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         activeRequest = request
@@ -110,19 +120,14 @@ actor PracticeRecordingCoordinator {
 
     func pause() async {
         await audioService.pause()
+        pauseClock()
         emit(.paused)
     }
 
     func resume() async throws {
         try await audioService.resume()
+        resumeClock()
         emit(.recording)
-    }
-
-    // Sync — no await, so no reentrancy risk
-    func retakeCurrentSlide() {
-        let total = accumulatedWordCount + currentTaskWordCount
-        wordCountAtCurrentSlideStart = total
-        currentSlideStartDate = Date()
     }
 
     func stop() async -> PracticeResult {
@@ -135,15 +140,15 @@ actor PracticeRecordingCoordinator {
         let audioURL = await audioService.stop()
         activeRequest = nil
 
-        let duration = sessionStartDate.map { Date().timeIntervalSince($0) } ?? 0
-        let finalWordCount = accumulatedWordCount + currentTaskWordCount
+        let duration = clock.now()
+        closeLastInterval(at: duration)
 
         let result = PracticeResult(
-            slideSnapshots: slideSnapshots,
-            finalWordCount: finalWordCount,
+            wordTimestamps: history,
+            slideIntervals: slideIntervals,
             duration: duration,
             audioFileURL: audioURL,
-            keynoteFileName: ""
+            keynoteFileName: keynoteFileName
         )
 
         emit(.finished(result))
@@ -152,17 +157,18 @@ actor PracticeRecordingCoordinator {
         return result
     }
 
-    func currentWPM() -> Int {
-        guard let slideStart = currentSlideStartDate else { return 0 }
-        let total = accumulatedWordCount + currentTaskWordCount
-        let wordsOnSlide = max(0, total - wordCountAtCurrentSlideStart)
-        let elapsed = max(1, Date().timeIntervalSince(slideStart))
-        return Int((Double(wordsOnSlide) / elapsed) * 60)
+    /// Samples the live WPM: gross pace over the sliding window against media time,
+    /// continuous across slide boundaries (a speedometer, not a per-slide reset).
+    ///
+    /// This ADVANCES the EMA smoothing state, so call it exactly once per refresh
+    /// tick — calling it more often would over-smooth and skew the displayed value.
+    func sampleWPM() -> Int {
+        let value = wpmCalculator.recompute(timestamps: history, now: clock.now())
+        return Int(value.rounded())
     }
 
     func elapsedSeconds() -> TimeInterval {
-        guard let start = sessionStartDate else { return 0 }
-        return Date().timeIntervalSince(start)
+        clock.now()
     }
 
     func currentSlide() -> Int {
@@ -171,6 +177,22 @@ actor PracticeRecordingCoordinator {
 
     // MARK: - Private
 
+    // Mutating methods on the value-type clock/calculator must run in a synchronous
+    // context — the compiler forbids `inout` access to actor-isolated stored
+    // properties across the suspension points of an `async` method.
+    private func beginSessionClocks() {
+        clock.start()
+        wpmCalculator.reset()
+    }
+
+    private func pauseClock() {
+        clock.pause()
+    }
+
+    private func resumeClock() {
+        clock.resume()
+    }
+
     private func beginRecognition(request: SFSpeechAudioBufferRecognitionRequest) async throws {
         try await speechService.startRecognition(
             request: request,
@@ -178,25 +200,39 @@ actor PracticeRecordingCoordinator {
                 guard let self else { return }
                 Task { await self.handleWordCountUpdate(count) }
             },
-            onTaskEnded: { [weak self] in
+            onTaskEnded: { [weak self] endedWithError in
                 guard let self else { return }
-                Task { await self.handleTaskEnded() }
+                Task { await self.handleTaskEnded(endedWithError: endedWithError) }
             }
         )
     }
 
     private func handleWordCountUpdate(_ count: Int) {
-        log.debug("Word count update: \(count)")
-        currentTaskWordCount = count
+        // A word-update Task may hop in after stop(); drop it so it can't append to
+        // history past the captured result or bleed into a later session.
+        guard isSessionActive else { return }
+        guard count > maxCountCurrentTask else { return }
+        let newWords = count - maxCountCurrentTask
+        maxCountCurrentTask = count
+        let now = clock.now()
+        history.append(contentsOf: Array(repeating: now, count: newWords))
+        log.debug("Word count update: \(count) (+\(newWords) at \(now, format: .fixed(precision: 2)))")
     }
 
-    private func handleTaskEnded() async {
+    private func handleTaskEnded(endedWithError: Bool) async {
         guard isSessionActive else { return }
-        accumulatedWordCount += currentTaskWordCount
-        currentTaskWordCount = 0
+        // Words from the ended task are already in `history`; reset the high-water
+        // mark so the next task's cumulative count starts from zero.
+        maxCountCurrentTask = 0
 
-        // Brief pause so a permanently failing recognizer doesn't restart in a tight loop.
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        // Always throttle the restart so a recognizer that ends rapidly (final OR
+        // error) can't spin in a tight loop. The normal-end floor is small to keep
+        // the recognition gap short (dropping few words from the window); errors
+        // back off longer.
+        let backoff = endedWithError
+            ? PracticeTuning.recognitionErrorBackoffNanos
+            : PracticeTuning.recognitionRestartDelayNanos
+        try? await Task.sleep(nanoseconds: backoff)
         guard isSessionActive else { return }
 
         let newRequest = SFSpeechAudioBufferRecognitionRequest()
@@ -205,7 +241,7 @@ actor PracticeRecordingCoordinator {
 
         do {
             try await beginRecognition(request: newRequest)
-            log.info("Recognition restarted after task end (accumulated words: \(self.accumulatedWordCount))")
+            log.info("Recognition restarted after task end (history words: \(self.history.count), error: \(endedWithError))")
         } catch {
             log.error("Recognition restart failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -237,20 +273,16 @@ actor PracticeRecordingCoordinator {
     private func handleSlideChange(to newSlide: Int) {
         guard newSlide != currentSlideNumber else { return }
 
-        let now = Date()
-        let sessionStart = sessionStartDate ?? now
-        let timestamp = now.timeIntervalSince(sessionStart)
-        let total = accumulatedWordCount + currentTaskWordCount
-
+        let now = clock.now()
+        closeLastInterval(at: now)
         currentSlideNumber = newSlide
-        wordCountAtCurrentSlideStart = total
-        currentSlideStartDate = now
+        slideIntervals.append(PracticeSlideInterval(slideNumber: newSlide, start: now, end: now))
+    }
 
-        slideSnapshots.append(PracticeSlideSnapshot(
-            slideNumber: newSlide,
-            wordCountAtStart: total,
-            timestampAtStart: timestamp
-        ))
+    private func closeLastInterval(at time: TimeInterval) {
+        guard !slideIntervals.isEmpty else { return }
+        let last = slideIntervals.count - 1
+        slideIntervals[last].end = max(slideIntervals[last].start, time)
     }
 
     private func emit(_ state: PracticeSessionState) {

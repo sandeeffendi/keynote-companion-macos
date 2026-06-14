@@ -14,7 +14,7 @@ protocol SpeechRecognizing: Sendable {
     func startRecognition(
         request: SFSpeechAudioBufferRecognitionRequest,
         onWordCount: @Sendable @escaping (Int) -> Void,
-        onTaskEnded: @Sendable @escaping () -> Void
+        onTaskEnded: @Sendable @escaping (_ endedWithError: Bool) -> Void
     ) async throws
     func stopRecognition() async
 }
@@ -44,7 +44,7 @@ actor SpeechRecognitionService: SpeechRecognizing {
     func startRecognition(
         request: SFSpeechAudioBufferRecognitionRequest,
         onWordCount: @Sendable @escaping (Int) -> Void,
-        onTaskEnded: @Sendable @escaping () -> Void
+        onTaskEnded: @Sendable @escaping (_ endedWithError: Bool) -> Void
     ) async throws {
         guard let recognizer, recognizer.isAvailable else {
             log.error("Recognizer unavailable (recognizer nil: \(self.recognizer == nil))")
@@ -76,14 +76,15 @@ actor SpeechRecognitionService: SpeechRecognizing {
             }
 
             // Any terminal event (error or final result) ends the task; the coordinator
-            // decides whether to restart with a fresh request.
+            // decides whether to restart with a fresh request. The error flag lets it
+            // restart immediately on a normal final result and back off only on error.
             if error != nil || result?.isFinal == true {
                 let alreadyEnded = taskEnded.withLock { ended -> Bool in
                     defer { ended = true }
                     return ended
                 }
                 guard !alreadyEnded else { return }
-                onTaskEnded()
+                onTaskEnded(error != nil)
             }
         }
     }

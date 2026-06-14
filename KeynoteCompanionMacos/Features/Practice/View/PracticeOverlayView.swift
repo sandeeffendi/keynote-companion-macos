@@ -30,10 +30,6 @@ struct PracticeOverlayView: View {
                             }
                         )
 
-                        IconCircleButton(systemName: "arrow.counterclockwise") {
-                            viewModel.retake()
-                        }
-
                         IconCircleButton(systemName: "stop.fill") {
                             viewModel.stop()
                         }
