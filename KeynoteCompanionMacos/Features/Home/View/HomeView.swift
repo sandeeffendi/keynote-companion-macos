@@ -32,7 +32,7 @@ struct HomeView: View {
             HomeFooterView(
                 isRecordEnabled: viewModel.state.isRecordEnabled,
                 onOpenSettingsTapped: openSettings,
-                onActivitiesTapped: showActivities,
+                onActivitiesTapped: showRecap,
                 onRecordPracticeTapped: showRecap
             )
         }

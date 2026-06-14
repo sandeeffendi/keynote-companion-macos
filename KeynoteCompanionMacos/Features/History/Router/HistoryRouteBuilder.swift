@@ -14,12 +14,11 @@ struct HistoryRouteBuilder {
 
         switch route {
         case .main:
-            HistoryView(viewModel: HistoryViewModel())
+            HistoryView()
         case .home:
             HomeView(viewModel: HomeViewModel())
         case .historyDetail:
-            RecapView(isFromHistory: true, viewModel: RecapViewModel())
-
+            RecapView(viewModel: RecapViewModel())
         }
 
     }

@@ -8,73 +8,75 @@
 import SwiftUI
 
 struct AudioPlayerView: View {
-    @ObservedObject var viewModel: RecapViewModel
+    @StateObject var viewModel: AudioViewModel
+    
+    init(viewModel: AudioViewModel = AudioViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+    
     var body: some View {
-        HStack(spacing: 12) {
-            Button {
-                // TODO: rewind
-            } label: {
-                Image(systemName: "backward.fill")
+        HStack(spacing: 10) {
+            Button(action: viewModel.rewind) {
+                Image(systemName: "backward.end.fill")
+                    .font(.system(size: 14))
             }
             .buttonStyle(.plain)
-
-            Button {
-                viewModel.isPlaying.toggle()
-            } label: {
+            
+            Button(action: viewModel.togglePlay) {
                 Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.title3)
+                    .font(.system(size: 14))
             }
             .buttonStyle(.plain)
-
-            Button {
-                // TODO: forward
-            } label: {
-                Image(systemName: "forward.fill")
+            
+            Button(action: viewModel.forward) {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 14))
             }
             .buttonStyle(.plain)
-
-            // Scrubber
+            
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.secondary.opacity(0.3))
+                        .fill(Color.primary.opacity(0.15))
                         .frame(height: 4)
-
                     Capsule()
                         .fill(Color.primary)
-                        .frame(width: geo.size.width * viewModel.playbackProgress, height: 4)
-
-                    Circle()
-                        .fill(Color.primary)
-                        .frame(width: 12, height: 12)
-                        .offset(x: geo.size.width * viewModel.playbackProgress - 6)
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    viewModel.playbackProgress = min(max(value.location.x / geo.size.width, 0), 1)
-                                }
-                        )
+                        .frame(width: geo.size.width * viewModel.progress, height: 4)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            viewModel.seek(to: value.location.x / geo.size.width)
+                        }
+                )
             }
             .frame(height: 20)
-
-            Button {
-                viewModel.isMuted.toggle()
-            } label: {
-                Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.slash")
-                    .foregroundStyle(.secondary)
+            
+            Button(action: viewModel.toggleMute) {
+                Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.system(size: 13))
             }
             .buttonStyle(.plain)
+            .padding(.leading, 4)
+            
+            Text(viewModel.timestampText)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 34, alignment: .trailing)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.secondary.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.vertical, 8)
+        .background(Color(NSColor.controlBackgroundColor))
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
+        .onDisappear { viewModel.stop() }
     }
 }
 
 #Preview {
-    AudioPlayerView(viewModel: RecapViewModel())
-    
+    AudioPlayerView()
+        .frame(width: 420)
+        .padding()
 }

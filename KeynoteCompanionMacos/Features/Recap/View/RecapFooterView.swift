@@ -5,39 +5,31 @@
 //  Created by Rahmadina on 12/06/26.
 //
 
+import Foundation
+import Combine
 import SwiftUI
 import SwiftData
 import TipKit
 
 
 struct RecapFooterView: View {
-    @ObservedObject var viewModel: RecapViewModel
-    @EnvironmentObject private var route: AppRouter
-    
-    let saveTip = SaveSessionTip()
-    let newTip = NewSessionTip()
-    
     var body: some View {
-        Divider()
-        HStack {
-            
-            PillButton(
-                title: "Record New Practice",
-                role: .primary,
-                action: navigateToHome
-            )
-            .popoverTip(newTip)
+        VStack{
+            Divider().padding(.vertical, 24)
+            HStack{
+                Spacer()
+                Button{
+                    
+                }label:{
+                    Label("Back to Home", systemImage: "house.fill").font(.title3).padding(7)
+                }
+            }
         }
     }
     
     
-    private func navigateToHome() {
-        route.pop()
-        route.push(.home(.main))
-    }
-    
 }
 
 #Preview {
-    RecapFooterView(viewModel: RecapViewModel())
+    RecapFooterView()
 }

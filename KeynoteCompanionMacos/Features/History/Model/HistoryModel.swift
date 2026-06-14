@@ -10,83 +10,47 @@ import SwiftData
 
 @Model
 class HistoryModel {
-    var sesTitle: String
-    var sesKeynote: String
+    var title: String
+    var keynote: String
     var date: String
     var time: String
     var duration: String
-
+    
     @Relationship(deleteRule: .cascade)
-    var feedbacks: [HistoryFeedback]
-
-    init(
-        sesTitle: String,
-        sesKeynote: String,
-        date: String,
-        time: String,
-        duration: String,
-        feedbacks: [HistoryFeedback] = []
-    ) {
-        self.sesTitle = sesTitle
-        self.sesKeynote = sesKeynote
+    var feedback: [Feedback]
+    
+    init(title: String, keynote: String, date: String, time: String, duration: String, feedback: [Feedback]) {
+        self.title = title
+        self.keynote = keynote
         self.date = date
         self.time = time
         self.duration = duration
-        self.feedbacks = feedbacks
-    }
-
-    func toRecapModel() -> RecapModel {
-        RecapModel(
-            sesTitle: sesTitle,
-            sesKeynote: sesKeynote,
-            date: date,
-            time: time,
-            duration: duration,
-            feedback: feedbacks.map { $0.toFeedback() }
-        )
+        self.feedback = feedback
     }
 }
 
 @Model
-class HistoryFeedback {
-    var title: String
-    var overall: Int
-    var unit: String
-    var tips: String
-    var subTitle: String
+class Feedback {
     var category: String
+    var overall: Int
+    var unit: String //satuan
+    var tips: String
+    
     var perSlideJSON: String
-
-    init(
-        title: String,
-        overall: Int,
-        unit: String,
-        tips: String,
-        subTitle: String,
-        category: String,
-        perSlide: [Slide]
-    ) {
-        self.title = title
+    
+    var perSlide: [Slide] {
+        Feedback.decode(perSlideJSON)
+    }
+    
+    init (category: String, overall: Int, unit: String, tips: String, perSlide: [Slide]) {
+        self.category = category
         self.overall = overall
         self.unit = unit
         self.tips = tips
-        self.subTitle = subTitle
-        self.category = category
-        self.perSlideJSON = HistoryFeedback.encode(perSlide)
+        self.perSlideJSON = Feedback.encode(perSlide)
     }
-
-    func toFeedback() -> Feedback {
-        Feedback(
-            title: title,
-            overall: overall,
-            unit: unit,
-            tips: tips,
-            subTitle: subTitle,
-            category: category,
-            perSlide: HistoryFeedback.decode(perSlideJSON)
-        )
-    }
-
+    
+    
     private static func encode(_ slides: [Slide]) -> String {
         guard let data = try? JSONEncoder().encode(slides),
               let string = String(data: data, encoding: .utf8)
@@ -100,4 +64,16 @@ class HistoryFeedback {
         else { return [] }
         return slides
     }
+    
+}
+
+struct Slide: Codable {
+    let page: Int
+    let attempt: [Attempt]
+}
+
+struct Attempt: Codable {
+    let no: Int
+    let value: String
+    let timestamp: TimeInterval
 }

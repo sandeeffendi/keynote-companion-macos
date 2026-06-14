@@ -11,10 +11,10 @@ import TipKit
 struct NewSessionTip: Tip {
     
     var title: Text{
-        Text("Start new session")
+        Text("Back Home")
     }
     var message: Text? {
-        Text("Go back to home and start new session")
+        Text("Go back to home then start new session")
        }
 
     var image: Image? {
