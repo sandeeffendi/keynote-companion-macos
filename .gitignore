@@ -56,3 +56,6 @@ fastlane/test_output/
 # Local config
 local.xcconfig
 Secrets.xcconfig
+
+# Design reference images (not runtime assets — kept out of the repo)
+KeynoteCompanionMacos/Resources/UIDesign/
