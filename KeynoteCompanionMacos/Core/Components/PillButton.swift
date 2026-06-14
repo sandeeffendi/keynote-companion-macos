@@ -32,18 +32,18 @@ struct PillButton: View {
                 Text(title)
                     .font(
                         role == .primary
-                            ? AppFont.primaryButton : AppFont.button
+                        ? AppFont.primaryButton : AppFont.button
                     )
                     .lineLimit(1)
             }
             .foregroundStyle(
                 isEnabled
-                    ? AppColor.controlTextPrimary : AppColor.controlTextDisabled
+                ? AppColor.controlTextPrimary : AppColor.controlTextDisabled
             )
             .frame(maxWidth: isFullWidth ? .infinity : nil)
             .frame(
                 height: role == .primary
-                    ? AppSize.mainCTAHeight : AppSize.footerButtonHeight
+                ? AppSize.mainCTAHeight : AppSize.footerButtonHeight
             )
             .padding(
                 .horizontal,
