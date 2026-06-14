@@ -15,7 +15,9 @@ struct KeynoteCompanionMacosApp: App {
     private let container: ModelContainer
 
     init() {
+#if DEBUG
         try? Tips.resetDatastore()
+#endif
         try? Tips.configure()
 
         let schema = Schema([HistoryModel.self, HistoryFeedback.self])

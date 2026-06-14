@@ -7,6 +7,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var practiceViewModel = PracticeViewModel()
 
@@ -57,6 +58,7 @@ struct HomeView: View {
         VStack(spacing: 0) {
             HomeHeaderView {
                 viewModel.showHelp()
+                tourController.start()
             }
 
             Spacer(minLength: 0)
@@ -92,6 +94,7 @@ struct HomeView: View {
 
     private func openSettings() {
         viewModel.openSettings()
+        tourController.complete(.openSettings)
         router.push(.settings(.main))
     }
 

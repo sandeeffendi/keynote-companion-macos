@@ -15,22 +15,15 @@ extension PermissionItem {
 
     nonisolated static let keynoteAutomation = PermissionItem(
         icon: AppIcon.permissionKeynoteAutomation,
-        title: "Allow Keynote Automation",
-        description: "For detecting your Keynote slideshow mode",
+        title: "Allow Screen Access",
+        description: "For detecting your keynote slideshow mode",
         permissionType: .keynoteAutomation
-    )
-
-    nonisolated static let wpmDetector = PermissionItem(
-        icon: AppIcon.permissionWPMDetector,
-        title: "WPM Detector",
-        description: "For detecting your speech rate, if needed",
-        permissionType: .wpmPlaceholder
     )
 
     nonisolated static let speechRecognition = PermissionItem(
         icon: AppIcon.permissionWPMDetector,
-        title: "Allow Speech Recognition",
-        description: "For measuring your live words-per-minute",
+        title: "WPM Indicator",
+        description: "For seeing your speech rate during practice",
         permissionType: .speechRecognition
     )
 }

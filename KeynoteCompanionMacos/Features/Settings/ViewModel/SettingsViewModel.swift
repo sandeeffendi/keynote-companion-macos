@@ -105,38 +105,24 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    func togglePermission(for type: PermissionType, newValue: Bool) {
-        switch type {
-        case .microphone:
-            toggleMicrophonePermission(newValue: newValue)
-        case .keynoteAutomation:
-            toggleKeynoteAutomationPermission(newValue: newValue)
-        case .speechRecognition:
-            toggleSpeechRecognitionPermission(newValue: newValue)
-        case .wpmPlaceholder:
-            setPermissionEnabled(false, for: type)
-        }
-    }
-
-    private func toggleMicrophonePermission(newValue: Bool) {
-        let status = currentStatus(for: .microphone)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                requestPermission(for: .microphone)
-            case .denied:
-                setPermissionEnabled(false, for: .microphone)
-                openSystemSettings(for: .microphone)
-            case .authorized:
-                setPermissionEnabled(true, for: .microphone)
+    /// HIG-aligned permission intent: request the permission when it's undetermined, or
+    /// deep-link to the matching System Settings pane when it's denied. Authorized rows
+    /// are non-interactive, so this is a no-op for them.
+    func handlePermissionAction(for type: PermissionType) {
+        switch currentStatus(for: type) {
+        case .authorized:
+            return
+        case .notDetermined:
+            switch type {
+            case .microphone, .speechRecognition:
+                requestPermission(for: type)
+            case .keynoteAutomation:
+                startAutomationRefresh(promptIfNeeded: true)
+            case .wpmPlaceholder:
+                break
             }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .microphone)
-
-            if status == .authorized {
-                openSystemSettings(for: .microphone)
-            }
+        case .denied:
+            openSystemSettings(for: type)
         }
     }
 
@@ -181,66 +167,6 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    private func setPermissionEnabled(
-        _ isEnabled: Bool,
-        for type: PermissionType
-    ) {
-        guard
-            let index = settingsData.permissionItems.firstIndex(
-                where: { $0.permissionType == type }
-            )
-        else {
-            return
-        }
-
-        settingsData.permissionItems[index].isEnabled = isEnabled
-    }
-
-    private func toggleSpeechRecognitionPermission(newValue: Bool) {
-        let status = currentStatus(for: .speechRecognition)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                requestPermission(for: .speechRecognition)
-            case .denied:
-                setPermissionEnabled(false, for: .speechRecognition)
-                openSystemSettings(for: .speechRecognition)
-            case .authorized:
-                setPermissionEnabled(true, for: .speechRecognition)
-            }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .speechRecognition)
-
-            if status == .authorized {
-                openSystemSettings(for: .speechRecognition)
-            }
-        }
-    }
-
-    private func toggleKeynoteAutomationPermission(newValue: Bool) {
-        let status = storedStatus(for: .keynoteAutomation)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                requestPermission(for: .keynoteAutomation)
-                startAutomationRefresh(promptIfNeeded: true)
-            case .denied:
-                setPermissionEnabled(false, for: .keynoteAutomation)
-                openSystemSettings(for: .keynoteAutomation)
-            case .authorized:
-                setPermissionEnabled(true, for: .keynoteAutomation)
-            }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .keynoteAutomation)
-
-            if status == .authorized {
-                openSystemSettings(for: .keynoteAutomation)
-            }
-        }
-    }
-
     private func startAutomationRefresh(promptIfNeeded: Bool) {
         automationRefreshTask?.cancel()
         let requestID = UUID()
@@ -269,10 +195,17 @@ final class SettingsViewModel: ObservableObject {
             return
         }
 
-        updatePermissionStatus(
-            mapAutomationStatus(status),
-            for: .keynoteAutomation
-        )
+        switch status {
+        case .targetNotRunning, .keynoteUnavailable:
+            // Keynote merely being closed must not downgrade an authorized permission;
+            // keep the last-known status instead of reporting denied.
+            return
+        default:
+            updatePermissionStatus(
+                mapAutomationStatus(status),
+                for: .keynoteAutomation
+            )
+        }
     }
 
     private func clearAutomationRefreshTaskIfCurrent(requestID: UUID) {

@@ -7,7 +7,7 @@ This is a native macOS SwiftUI/AppKit project. The main Xcode project is `Keynot
 Source is organized by responsibility:
 
 - `App/`: app routing and root composition.
-- `Core/`: shared components, design tokens, window utilities, and services.
+- `Core/`: shared components, design tokens, window utilities, services, and the custom guided-tour overlay (`Core/Components/Tour/`).
 - `Features/<Feature>/`: feature-local `Model`, `View`, `ViewModel`, and `Router` code.
 - `Resources/`: asset catalogs and UI design references.
 
@@ -56,3 +56,5 @@ Protected branches are `main` and `development`; do not push directly. Open PRs 
 ## Security & Configuration Tips
 
 The app interacts with microphone permission, Apple Events automation, and Keynote availability. Do not hard-code local paths, personal provisioning details, or permission assumptions. Keep entitlements changes small and document why they are required.
+
+Permission rows in Settings are **status-driven buttons** (Allow / Allowed / Open Settings) that mirror live system state — not toggles, since the app can only request or deep-link to System Settings, never revoke. Keynote automation status must not be downgraded to denied just because Keynote is closed. The first-run setup walkthrough is a custom spotlight overlay (`Core/Components/Tour/`), not TipKit; TipKit remains only for the Recap tips. See `CLAUDE.md` → "Setup Tour & Settings Permissions" for details.

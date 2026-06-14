@@ -24,6 +24,11 @@ enum AppColor {
     static let separator = Color.black.opacity(0.12)
     static let shadow = Color.black.opacity(0.14)
 
+    static let cardSurface = Color.white
+    static let scrim = Color.black.opacity(0.42)
+    static let spotlightRing = Color.white.opacity(0.5)
+    static let permissionGranted = Color(red: 0.20, green: 0.75, blue: 0.34)
+
     static let trafficClose = Color(red: 1.00, green: 0.37, blue: 0.34)
     static let trafficMinimize = Color(red: 1.00, green: 0.75, blue: 0.18)
     static let trafficZoom = Color(red: 0.20, green: 0.80, blue: 0.34)
