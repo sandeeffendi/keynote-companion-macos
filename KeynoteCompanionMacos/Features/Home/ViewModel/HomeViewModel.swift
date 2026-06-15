@@ -13,9 +13,11 @@ final class HomeViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private(set) var sessionStatus: HomeSessionStatus = .permissionMissing
+    private(set) var currentDocumentName: String = ""
 
     private let microphonePermissionService: MicrophonePermissionChecking
     private let automationPermissionService: KeynoteAutomationPermissionChecking
+    private let speechPermissionService: SpeechRecognitionPermissionChecking
     private let keynoteStatusService: KeynoteStatusChecking
     private let keynoteFileOpener: KeynoteFileOpening
     private let pollingIntervalNanoseconds: UInt64
@@ -31,6 +33,7 @@ final class HomeViewModel: ObservableObject {
             automationPermissionService: KeynoteAutomationPermissionService(
                 appResolver: appResolver
             ),
+            speechPermissionService: SpeechRecognitionPermissionService(),
             keynoteStatusService: KeynoteStatusService(appResolver: appResolver),
             keynoteFileOpener: KeynoteFileOpener(appResolver: appResolver),
             pollingIntervalNanoseconds: 1_000_000_000
@@ -41,6 +44,7 @@ final class HomeViewModel: ObservableObject {
         state: HomeViewState,
         microphonePermissionService: MicrophonePermissionChecking,
         automationPermissionService: KeynoteAutomationPermissionChecking,
+        speechPermissionService: SpeechRecognitionPermissionChecking,
         keynoteStatusService: KeynoteStatusChecking,
         keynoteFileOpener: KeynoteFileOpening,
         pollingIntervalNanoseconds: UInt64 = 1_000_000_000
@@ -48,6 +52,7 @@ final class HomeViewModel: ObservableObject {
         self.state = state
         self.microphonePermissionService = microphonePermissionService
         self.automationPermissionService = automationPermissionService
+        self.speechPermissionService = speechPermissionService
         self.keynoteStatusService = keynoteStatusService
         self.keynoteFileOpener = keynoteFileOpener
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
@@ -94,6 +99,11 @@ final class HomeViewModel: ObservableObject {
             return
         }
 
+        guard speechPermissionService.authorizationStatus() == .authorized else {
+            apply(.permissionMissing)
+            return
+        }
+
         let automationStatus = await automationPermissionService.authorizationStatus(
             promptIfNeeded: false
         )
@@ -134,6 +144,10 @@ final class HomeViewModel: ObservableObject {
 
             guard !Task.isCancelled else {
                 return
+            }
+
+            if runtimeStatus.hasOpenDocuments {
+                currentDocumentName = runtimeStatus.documentName
             }
 
             if runtimeStatus.hasOpenDocuments && runtimeStatus.isPlaying {

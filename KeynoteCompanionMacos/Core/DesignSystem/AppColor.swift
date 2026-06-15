@@ -5,55 +5,62 @@
 //  Created by Sande Effendi on 05/06/26.
 //
 
-import Foundation
+import AppKit
 import SwiftUI
 
 // PIC: arfian
+//
+// Monochrome, system-adaptive palette. Prefer Apple semantic colors (label /
+// secondaryLabel / separator / windowBackground …) so the UI follows the user's
+// macOS appearance automatically. Use the `Color(light:dark:)` helper only where
+// no semantic color expresses the intent (translucent glass rims, overlays).
 enum AppColor {
-    static let textPrimary = Color.black.opacity(0.72)
-    static let textSecondary = Color.black.opacity(0.48)
-    static let textTertiary = Color.black.opacity(0.32)
+    static let textPrimary = Color.primary
+    static let textSecondary = Color.secondary
+    static let textTertiary = Color(nsColor: .tertiaryLabelColor)
 
-    static let iconPrimary = Color.black.opacity(0.68)
-    static let iconSecondary = Color.black.opacity(0.42)
+    static let iconPrimary = Color.primary
+    static let iconSecondary = Color.secondary
 
-    static let controlTextPrimary = Color.black.opacity(0.68)
-    static let controlTextDisabled = Color.black.opacity(0.28)
+    static let controlTextPrimary = Color.primary
+    static let controlTextDisabled = Color(nsColor: .disabledControlTextColor)
 
-    static let borderSubtle = Color.white.opacity(0.28)
-    static let separator = Color.black.opacity(0.12)
-    static let shadow = Color.black.opacity(0.14)
+    // Monochrome tint for prominent (primary) controls — dark fill in light mode,
+    // light fill in dark mode. Native `.buttonStyle(.glassProminent)` derives the
+    // contrasting label automatically; for the manually-tinted glass used by `PillButton`
+    // (which preserves exact pill metrics) pair it with `onControlAccent` for the label.
+    static let controlAccent = Color(light: .black, dark: .white)
+    static let onControlAccent = Color(light: .white, dark: .black)
 
+    // Subtle highlight rim on glass surfaces — a light hairline in both modes,
+    // softened in dark so it doesn't glare.
+    static let borderSubtle = Color(light: NSColor.white.withAlphaComponent(0.28),
+                                    dark: NSColor.white.withAlphaComponent(0.12))
+    static let separator = Color(nsColor: .separatorColor)
+    static let shadow = Color.black.opacity(0.14) // shadows stay black in both modes
+
+    static let cardSurface = Color(nsColor: .windowBackgroundColor)
+    static let scrim = Color.black.opacity(0.42)        // dimming scrim is black in both modes
+    static let spotlightRing = Color.white.opacity(0.5) // ring sits on the dimmed scrim
+    static let permissionGranted = Color(nsColor: .systemGreen)
+
+    // Traffic-light dots mirror macOS brand colors — identical in light & dark.
     static let trafficClose = Color(red: 1.00, green: 0.37, blue: 0.34)
     static let trafficMinimize = Color(red: 1.00, green: 0.75, blue: 0.18)
     static let trafficZoom = Color(red: 0.20, green: 0.80, blue: 0.34)
     static let trafficSymbol = Color.black.opacity(0.58)
+
+    static let wpmSlow = Color(nsColor: .systemYellow)  // < 90 WPM
+    static let wpmGood = Color(nsColor: .systemGreen)   // 90–120 WPM
+    static let wpmFast = Color(nsColor: .systemRed)     // > 120 WPM
 }
 
-
-//feedback dina
-extension Color { //konvert hexcode rgb
-    init(hex: String) {
-            let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-            var int: UInt64 = 0
-            Scanner(string: hex).scanHexInt64(&int)
-            let r, g, b: UInt64
-            switch hex.count {
-            case 3: // RGB (12-bit)
-                (r, g, b) = ((int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-            case 6: // RGB (24-bit)
-                (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
-            default:
-                (r, g, b) = (1, 1, 1)
-            }
-            self.init(.displayP3, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: 1)
-        }
-}
-extension ShapeStyle where Self == Color {
-    static var cBtnSecondary: Color {
-        Color(hex: "767680")
-    }
-    static var cBtnPrimary: Color {
-        Color(hex: "000000")
+extension Color {
+    /// Builds an appearance-adaptive color from explicit light/dark `NSColor`s.
+    /// Used for translucent surfaces that have no matching semantic system color.
+    init(light: NSColor, dark: NSColor) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+        })
     }
 }

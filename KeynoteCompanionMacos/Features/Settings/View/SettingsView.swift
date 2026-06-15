@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: SettingsViewModel
 #if DEBUG
     @StateObject private var onboardingViewModel = OnboardingViewModel()
@@ -25,8 +26,10 @@ struct SettingsView: View {
                     systemName: "chevron.left",
                     size: Metrics.backButtonSize
                 ) {
+                    tourController.complete(.backToHome)
                     router.popToRoot()
                 }
+                .tourTarget(.backToHome)
 
                 HStack(spacing: AppSpacing.md) {
                     Text("Settings")
@@ -75,24 +78,42 @@ struct SettingsView: View {
                         icon: permissionItem.icon,
                         title: permissionItem.title,
                         description: permissionItem.description,
+                        status: permissionItem.status,
                         showsSeparator: permissionItem.id != viewModel.settingsData
                             .permissionItems.last?.id,
-                        isOn: Binding(
-                            get: {
-                                viewModel.isPermissionEnabled(
-                                    permissionItem.permissionType
-                                )
-                            },
-                            set: { newValue in
-                                viewModel.togglePermission(
-                                    for: permissionItem.permissionType,
-                                    newValue: newValue
-                                )
-                            }
-                        )
+                        onAction: {
+                            viewModel.handlePermissionAction(
+                                for: permissionItem.permissionType
+                            )
+                        }
                     )
+                    .tourTarget(tourStep(for: permissionItem.permissionType))
                 }
             }
+        }
+        .onChange(of: authorizedSignature) { _, _ in
+            advanceTourForGrantedPermissions()
+        }
+    }
+
+    /// A value that changes whenever any permission flips to/from authorized, so the tour
+    /// can react when the user grants the highlighted permission.
+    private var authorizedSignature: [Bool] {
+        viewModel.settingsData.permissionItems.map { $0.status == .authorized }
+    }
+
+    private func advanceTourForGrantedPermissions() {
+        for item in viewModel.settingsData.permissionItems
+        where item.status == .authorized {
+            tourController.complete(tourStep(for: item.permissionType))
+        }
+    }
+
+    private func tourStep(for type: PermissionType) -> TourStep {
+        switch type {
+        case .microphone: return .micPermission
+        case .keynoteAutomation: return .screenPermission
+        case .speechRecognition, .wpmPlaceholder: return .wpmPermission
         }
     }
 
@@ -134,8 +155,9 @@ private struct SettingsPermissionRow: View {
     let icon: String
     let title: String
     let description: String
+    let status: PermissionStatus
     let showsSeparator: Bool
-    @Binding var isOn: Bool
+    let onAction: () -> Void
 
     var body: some View {
         rowContent
@@ -170,13 +192,31 @@ private struct SettingsPermissionRow: View {
 
             Spacer(minLength: AppSpacing.md)
 
-            Toggle("", isOn: $isOn)
-                .toggleStyle(.switch)
-                .labelsHidden()
+            permissionControl
         }
         .padding(.horizontal, AppSpacing.lg)
         .frame(height: Metrics.rowHeight)
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var permissionControl: some View {
+        switch status {
+        case .authorized:
+            Text("Allowed")
+                .font(AppFont.button)
+                .foregroundStyle(AppColor.textTertiary)
+                .accessibilityLabel("\(title) allowed")
+        case .notDetermined:
+            Button("Allow", action: onAction)
+                .buttonStyle(.glassProminent)
+                .tint(AppColor.controlAccent)
+                .controlSize(.small)
+        case .denied:
+            Button("Open Settings", action: onAction)
+                .buttonStyle(.glass)
+                .controlSize(.small)
+        }
     }
 
     private enum Metrics {
@@ -190,5 +230,6 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView(viewModel: SettingsViewModel())
             .environmentObject(AppRouter())
+            .environmentObject(TourController())
     }
 }

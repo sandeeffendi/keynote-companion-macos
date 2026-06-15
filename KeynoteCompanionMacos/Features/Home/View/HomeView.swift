@@ -7,7 +7,9 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: HomeViewModel
+    @StateObject private var practiceViewModel = PracticeViewModel()
 
     init(viewModel: HomeViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -23,11 +25,15 @@ struct HomeView: View {
                         height: AppSize.homeWindowHeight
                     )
                 ) {
-                    AppWindowSurface(
-                        width: AppSize.homeWindowWidth,
-                        height: AppSize.homeWindowHeight
-                    ) {
-                        homeContent
+                    if practiceViewModel.isRecording {
+                        PracticeOverlayView(viewModel: practiceViewModel)
+                    } else {
+                        AppWindowSurface(
+                            width: AppSize.homeWindowWidth,
+                            height: AppSize.homeWindowHeight
+                        ) {
+                            homeContent
+                        }
                     }
                 }
             )
@@ -35,12 +41,24 @@ struct HomeView: View {
                 await viewModel.observeSession()
             }
             .navigationBarBackButtonHidden()
+            .onAppear {
+                practiceViewModel.onSessionFinished = { [weak router] result in
+                    let recapModel = result.toRecapModel()
+                    router?.push(.recap(.main(recapModel)))
+                }
+            }
+            .onChange(of: viewModel.state) { _, newState in
+                if practiceViewModel.isRecording && newState != .keynoteSlideshowActive {
+                    practiceViewModel.stop()
+                }
+            }
     }
 
     private var homeContent: some View {
         VStack(spacing: 0) {
             HomeHeaderView {
                 viewModel.showHelp()
+                tourController.start()
             }
 
             Spacer(minLength: 0)
@@ -57,7 +75,7 @@ struct HomeView: View {
                 isRecordEnabled: viewModel.state.isRecordEnabled,
                 onOpenSettingsTapped: openSettings,
                 onActivitiesTapped: showActivities,
-                onRecordPracticeTapped: showRecap
+                onRecordPracticeTapped: startRecording
             )
         }
         .padding(.horizontal, AppSpacing.xl)
@@ -76,6 +94,7 @@ struct HomeView: View {
 
     private func openSettings() {
         viewModel.openSettings()
+        tourController.complete(.openSettings)
         router.push(.settings(.main))
     }
 
@@ -84,8 +103,10 @@ struct HomeView: View {
         router.push(.history(.main))
     }
 
-    private func showRecap() {
-        viewModel.showRecap()
-        router.push(.recap(.main))
+    private func startRecording() {
+        let fileName = viewModel.currentDocumentName
+        Task {
+            await practiceViewModel.startSession(keynoteFileName: fileName)
+        }
     }
 }

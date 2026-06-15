@@ -21,6 +21,7 @@ struct HomeFooterView: View {
                 title: "Open Settings",
                 action: onOpenSettingsTapped
             )
+            .tourTarget(.openSettings)
 
             Rectangle()
                 .fill(AppColor.separator)

@@ -15,6 +15,7 @@ class HistoryModel {
     var date: String
     var time: String
     var duration: String
+    var audioFileURL: String?
 
     @Relationship(deleteRule: .cascade)
     var feedbacks: [HistoryFeedback]
@@ -25,7 +26,8 @@ class HistoryModel {
         date: String,
         time: String,
         duration: String,
-        feedbacks: [HistoryFeedback] = []
+        feedbacks: [HistoryFeedback] = [],
+        audioFileURL: String? = nil
     ) {
         self.sesTitle = sesTitle
         self.sesKeynote = sesKeynote
@@ -33,6 +35,7 @@ class HistoryModel {
         self.time = time
         self.duration = duration
         self.feedbacks = feedbacks
+        self.audioFileURL = audioFileURL
     }
 
     func toRecapModel() -> RecapModel {
@@ -42,7 +45,8 @@ class HistoryModel {
             date: date,
             time: time,
             duration: duration,
-            feedback: feedbacks.map { $0.toFeedback() }
+            feedback: feedbacks.map { $0.toFeedback() },
+            audioFileURL: audioFileURL
         )
     }
 }

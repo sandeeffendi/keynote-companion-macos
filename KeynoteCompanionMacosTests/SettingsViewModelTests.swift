@@ -38,10 +38,11 @@ final class SettingsViewModelTests: XCTestCase {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector
+                    .speechRecognition
                 ]
             ),
-            automationPermissionService: service
+            automationPermissionService: service,
+            speechPermissionService: StubSpeechRecognitionPermissionService()
         )
 
         await service.waitForPendingRequestCount(1)
@@ -66,17 +67,18 @@ final class SettingsViewModelTests: XCTestCase {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector
+                    .speechRecognition
                 ]
             ),
-            automationPermissionService: service
+            automationPermissionService: service,
+            speechPermissionService: StubSpeechRecognitionPermissionService()
         )
 
         await waitUntil {
             viewModel.currentStatus(for: .keynoteAutomation) == .notDetermined
         }
 
-        viewModel.togglePermission(for: .keynoteAutomation, newValue: true)
+        viewModel.handlePermissionAction(for: .keynoteAutomation)
         await waitUntil {
             viewModel.currentStatus(for: .keynoteAutomation) == .authorized
         }
@@ -84,6 +86,35 @@ final class SettingsViewModelTests: XCTestCase {
         let prompts = await service.promptRequests()
         XCTAssertEqual(prompts, [false, true])
         XCTAssertTrue(viewModel.isPermissionEnabled(.keynoteAutomation))
+    }
+
+    func testAutomationStaysAuthorizedWhenKeynoteIsNotRunning() async {
+        let service = RecordingAutomationPermissionService(
+            statuses: [.authorized, .targetNotRunning]
+        )
+        let viewModel = SettingsViewModel(
+            settingsData: SettingsModel(
+                permissionItems: [
+                    .microphone,
+                    .keynoteAutomation,
+                    .speechRecognition
+                ]
+            ),
+            automationPermissionService: service,
+            speechPermissionService: StubSpeechRecognitionPermissionService()
+        )
+
+        await waitUntil {
+            viewModel.currentStatus(for: .keynoteAutomation) == .authorized
+        }
+
+        // A later refresh that reports Keynote is closed must not downgrade to denied.
+        viewModel.refreshAllPermissionStatuses()
+        for _ in 0..<100 where await service.promptRequests().count < 2 {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(viewModel.currentStatus(for: .keynoteAutomation), .authorized)
     }
 }
 
@@ -136,6 +167,22 @@ private actor RecordingAutomationPermissionService:
 
     func promptRequests() -> [Bool] {
         prompts
+    }
+}
+
+private struct StubSpeechRecognitionPermissionService: SpeechRecognitionPermissionChecking {
+    let status: PermissionStatus
+
+    init(status: PermissionStatus = .notDetermined) {
+        self.status = status
+    }
+
+    func authorizationStatus() -> PermissionStatus {
+        status
+    }
+
+    func requestPermission() async -> PermissionStatus {
+        status
     }
 }
 
