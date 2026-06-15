@@ -33,6 +33,7 @@ final class PermissionsSheetViewModel: ObservableObject {
     private let automationPermissionService: KeynoteAutomationPermissionChecking
     private let microphonePermissionService: MicrophonePermissionChecking
     private let speechPermissionService: SpeechRecognitionPermissionChecking
+    private let automationStatusStore: KeynoteAutomationStatusStoring
 
     /// True once all three accesses are authorized — HomeView watches this to dismiss.
     var allGranted: Bool {
@@ -46,18 +47,22 @@ final class PermissionsSheetViewModel: ObservableObject {
                 appResolver: appResolver
             ),
             microphonePermissionService: MicrophonePermissionService(),
-            speechPermissionService: SpeechRecognitionPermissionService()
+            speechPermissionService: SpeechRecognitionPermissionService(),
+            automationStatusStore: UserDefaultsKeynoteAutomationStatusStore()
         )
     }
 
     init(
         automationPermissionService: KeynoteAutomationPermissionChecking,
         microphonePermissionService: MicrophonePermissionChecking,
-        speechPermissionService: SpeechRecognitionPermissionChecking
+        speechPermissionService: SpeechRecognitionPermissionChecking,
+        automationStatusStore: KeynoteAutomationStatusStoring =
+            UserDefaultsKeynoteAutomationStatusStore()
     ) {
         self.automationPermissionService = automationPermissionService
         self.microphonePermissionService = microphonePermissionService
         self.speechPermissionService = speechPermissionService
+        self.automationStatusStore = automationStatusStore
         self.rows = Self.makeRows()
         refresh()
     }
@@ -162,7 +167,11 @@ final class PermissionsSheetViewModel: ObservableObject {
             // permission — keep the last-known status.
             return
         default:
-            updateStatus(mapAutomationStatus(state), for: .keynoteAutomation)
+            let mapped = mapAutomationStatus(state)
+            // Determinable read — sync the shared cache so the home reflects the freshly
+            // granted Keynote access right after the sheet auto-dismisses.
+            automationStatusStore.update(mapped)
+            updateStatus(mapped, for: .keynoteAutomation)
         }
     }
 
