@@ -3,12 +3,20 @@
 //  KeynoteCompanionMacos
 //
 
-import Foundation
 import Combine
 import SwiftUI
 
 final class AppRouter: ObservableObject {
-    @Published var path = NavigationPath()
+    @Published var path: [AppRoute] = []
+    @Published var shouldRestartSplash = false
+
+    var activeRoute: AppRoute? {
+        path.last
+    }
+
+    var isShowingHomeRoute: Bool {
+        AppRoute.isHomeRoute(activeRoute)
+    }
 
     func push(_ route: AppRoute) {
         path.append(route)
@@ -26,5 +34,13 @@ final class AppRouter: ObservableObject {
     func replace(with route: AppRoute) {
         path.removeLast(path.count)
         path.append(route)
+    }
+
+    func requestSplashRestart() {
+        shouldRestartSplash = true
+    }
+
+    func consumeSplashRestartRequest() {
+        shouldRestartSplash = false
     }
 }

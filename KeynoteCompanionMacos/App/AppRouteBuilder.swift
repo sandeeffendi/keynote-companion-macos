@@ -17,6 +17,12 @@ struct AppRouteBuilder {
 
         case .recap(let recapRoute):
             RecapRouteBuilder.build(recapRoute)
+            
+        case .history(let historyRoute):
+            HistoryRouteBuilder.build(historyRoute)
+
+        case .onboarding(let onboardingRouter):
+            OnboardingRouteBuilder.build(onboardingRouter)
         }
 
     }
