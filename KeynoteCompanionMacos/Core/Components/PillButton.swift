@@ -12,6 +12,15 @@ enum PillButtonRole {
     case primary
 }
 
+/// Capsule call-to-action on Liquid Glass.
+/// - `.primary`   → glass tinted monochrome (`AppColor.controlAccent`) so it reads as a
+///   prominent dark/light pill against the clear glass window surface, with a contrasting
+///   `onControlAccent` label.
+/// - `.secondary` → plain translucent glass.
+///
+/// Uses `.glassEffect(in: Capsule())` rather than `.buttonStyle(.glassProminent)` on purpose:
+/// the explicit Capsule shape keeps the exact pill metrics (`mainCTAHeight`/`footerButtonHeight`,
+/// padding) intact, which the native prominent style would otherwise resize.
 struct PillButton: View {
     let title: String
     var systemImage: String?
@@ -36,10 +45,7 @@ struct PillButton: View {
                     )
                     .lineLimit(1)
             }
-            .foregroundStyle(
-                isEnabled
-                ? AppColor.controlTextPrimary : AppColor.controlTextDisabled
-            )
+            .foregroundStyle(foregroundColor)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
             .frame(
                 height: role == .primary
@@ -53,9 +59,24 @@ struct PillButton: View {
         }
         .buttonStyle(.plain)
         .glassEffect(
-            isEnabled ? .regular.interactive() : .regular,
+            isEnabled
+            ? (role == .primary
+               ? .regular.tint(AppColor.controlAccent).interactive()
+               : .regular.interactive())
+            : (role == .primary
+               ? .regular.tint(AppColor.controlAccent)
+               : .regular),
             in: Capsule()
         )
         .opacity(isEnabled ? 1 : 0.48)
+    }
+
+    private var foregroundColor: Color {
+        switch role {
+        case .primary:
+            return AppColor.onControlAccent
+        case .secondary:
+            return isEnabled ? AppColor.controlTextPrimary : AppColor.controlTextDisabled
+        }
     }
 }

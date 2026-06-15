@@ -27,6 +27,7 @@ struct HistoryView: View {
                         .font(.system(size: 24))
                         .frame(width: 36, height: 36)
                 }
+                .buttonStyle(.glass)
                 .clipShape(Circle())
 
                 HStack {
@@ -43,7 +44,7 @@ struct HistoryView: View {
                         .textFieldStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, minHeight: 42)
-                .background(Color(.sRGB, red: 0.8, green: 0.8, blue: 0.8, opacity: 0.2))
+                .background(Color(nsColor: .quaternaryLabelColor))
                 .cornerRadius(100)
 
                 Spacer()

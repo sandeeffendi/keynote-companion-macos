@@ -204,7 +204,6 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 defer: false
             )
             panel.isReleasedWhenClosed = false
-            panel.appearance = NSAppearance(named: .aqua)
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false

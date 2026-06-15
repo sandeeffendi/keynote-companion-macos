@@ -24,7 +24,6 @@ struct AppWindowConfigurator: NSViewRepresentable {
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
 
-        window.appearance = NSAppearance(named: .aqua)
         window.isOpaque = false
         window.backgroundColor = .clear
         window.titleVisibility = .hidden

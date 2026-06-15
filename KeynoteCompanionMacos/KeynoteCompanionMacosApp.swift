@@ -34,7 +34,6 @@ struct KeynoteCompanionMacosApp: App {
             RootView()
                 .environmentObject(router)
                 .modelContainer(container)
-                .preferredColorScheme(.light)
         }
         .defaultSize(
             width: AppSize.splashWindowWidth,

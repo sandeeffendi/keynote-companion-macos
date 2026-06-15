@@ -57,11 +57,10 @@ struct RecapView: View {
             if showSavedToast {
                 Text("This session already saved to history")
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppColor.textPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.1))
-                    .clipShape(Capsule())
+                    .glassEffect(.regular, in: Capsule())
                     .padding(.leading)
                     .padding(.bottom, 80)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -84,6 +83,7 @@ struct RecapView: View {
                         .font(.system(size: 24))
                         .frame(width: 36, height: 36)
                 }
+                .buttonStyle(.glass)
                 .clipShape(Circle()).padding(.bottom,12)
             }
             Text(viewModel.recapData.sesTitle)
@@ -180,43 +180,44 @@ struct RecapView: View {
     // Footer
 
     private var footer: some View {
-        HStack {
-            Button {
-                if !saveToHistory {
-                    viewModel.saveRecap(context: modelContext)
-                    saveToHistory = true
+        GlassEffectContainer {
+            HStack {
+                Button {
+                    if !saveToHistory {
+                        viewModel.saveRecap(context: modelContext)
+                        saveToHistory = true
+                    }
+                    showSavedToast = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        showSavedToast = false
+                    }
+                } label: {
+                    Image(systemName: saveToHistory ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 20))
+                        .frame(width: 48, height: 48)
                 }
-                showSavedToast = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    showSavedToast = false
+                .buttonStyle(.glass)
+                .clipShape(Circle())
+                .popoverTip(saveTip) { action in
+                    guard action.id == "next" else { return }
+                    SaveSessionTip.doneTip = true
+                    saveTip.invalidate(reason: .actionPerformed)
                 }
-            } label: {
-                Image(systemName: saveToHistory ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 20))
-                    .frame(width: 48, height: 48)
-            }
-            .background(Color.secondary.opacity(0.1))
-            .clipShape(Circle())
-            .popoverTip(saveTip) { action in
-                guard action.id == "next" else { return }
-                SaveSessionTip.doneTip = true
-                saveTip.invalidate(reason: .actionPerformed)
-            }
 
-            Spacer()
+                Spacer()
 
-            Button {
-                route.pop()
-                route.push(.home(.main))
-            } label: {
-                Text("Record New Practice")
-                    .font(.system(size: 17))
-                    .foregroundColor(.white)
-                    .frame(width: 194, height: 48)
+                Button {
+                    route.pop()
+                    route.push(.home(.main))
+                } label: {
+                    Text("Record New Practice")
+                        .font(.system(size: 17))
+                        .frame(width: 194, height: 48)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(AppColor.controlAccent)
+                .popoverTip(newTip)
             }
-            .background(Color.black)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .popoverTip(newTip)
         }
     }
 }

@@ -210,6 +210,7 @@ private struct SettingsPermissionRow: View {
         case .notDetermined:
             Button("Allow", action: onAction)
                 .buttonStyle(.glassProminent)
+                .tint(AppColor.controlAccent)
                 .controlSize(.small)
         case .denied:
             Button("Open Settings", action: onAction)
