@@ -10,7 +10,6 @@ import SwiftUI
 struct OnboardingView: View {
 
     @EnvironmentObject private var route: AppRouter
-    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: OnboardingViewModel
 
     init(viewModel: OnboardingViewModel) {
@@ -66,7 +65,6 @@ struct OnboardingView: View {
     private func completeOnboarding() {
         viewModel.completeOnboarding()
         route.popToRoot()
-        tourController.start()
     }
 
     private enum Metrics {
