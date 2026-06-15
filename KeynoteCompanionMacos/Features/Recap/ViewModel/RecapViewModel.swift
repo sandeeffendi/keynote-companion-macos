@@ -11,6 +11,7 @@ import SwiftData
 import SwiftUI
 
 final class RecapViewModel: ObservableObject {
-        let audioViewModel = AudioViewModel()
+    let audioViewModel = AudioViewModel()
     
+    func showDetail(){}
 }

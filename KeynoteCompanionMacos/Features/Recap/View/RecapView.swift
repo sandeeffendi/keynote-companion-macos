@@ -24,18 +24,20 @@ struct RecapView: View {
                 RecapHeaderView(viewModel: viewModel)
                 Text("Slides Highlights").font(.title).bold().padding(.horizontal)
                 HStack(spacing:10){
-                    RecapCardView()
-                    RecapCardView()
+                    RecapCardView(viewModel: viewModel)
+                    RecapCardView(viewModel: viewModel)
                 }
                 Text("Replay your session").font(.title3).padding(.horizontal).padding(.top)
                 AudioPlayerView(viewModel: viewModel.audioViewModel)
-                RecapFooterView()
+                RecapFooterView(viewModel: viewModel)
             }.padding(24)
         }
     }
+    
 
 }
 
 #Preview {
     RecapView(viewModel: RecapViewModel()).frame(maxWidth: 700, minHeight: 740)
+        .environmentObject(AppRouter())
 }

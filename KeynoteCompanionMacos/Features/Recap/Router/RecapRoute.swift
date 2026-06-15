@@ -11,4 +11,5 @@ enum RecapRoute: Hashable {
     case main
     case fromHistory
     case home
+    case detail
 }

@@ -8,24 +8,27 @@
 import SwiftUI
 
 struct RecapCardView: View {
+    
+    @EnvironmentObject private var router: AppRouter
+    @StateObject private var viewModel: RecapViewModel
+
+    init(viewModel: RecapViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         VStack(alignment: .leading) {
-            HStack{
-                Text("Average Speaking Rate").font(.subheadline)
-                Spacer()
-                Button{
-                    
-                }label: {
-                    Text("Detail")
-                }
-            }
+            Text("Average Speaking Rate").font(.subheadline)
             Text("150").font(.largeTitle).padding(.top,15)
             Text("Words per Minute").font(.title2)
             Divider().padding(.vertical,8)
             Text("Top 3 slides with highest WPM").font(.body)
             SlideRowView()
-            Spacer()
+            Button{
+                showDetail()
+            }label: {
+                Text("More...")
+            }.frame(maxWidth: .infinity,alignment: .trailing)
         }
         .padding(16)
         .background(
@@ -34,8 +37,15 @@ struct RecapCardView: View {
                 .stroke(.black, lineWidth: 1).frame(maxWidth: .infinity,maxHeight: .infinity)
         )
     }
+    
+    private func showDetail(){
+        viewModel.showDetail()
+        router.pop()
+        router.push(.recap(.detail))
+        
+    }
 }
 
 #Preview {
-    RecapCardView().frame(width: 248, height: 389)
+    RecapCardView(viewModel: RecapViewModel()).frame(width: 248, height: 389)
 }
