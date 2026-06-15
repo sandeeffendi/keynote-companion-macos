@@ -59,10 +59,26 @@ final class PermissionsSheetViewModelTests: XCTestCase {
         )
     }
 
+    func testDeterminableAutomationResultSyncsStore() async {
+        let store = MockKeynoteAutomationStatusStore(initial: .notDetermined)
+        let viewModel = makeViewModel(
+            automation: .authorized,
+            microphone: .authorized,
+            speech: .authorized,
+            store: store
+        )
+
+        await waitUntil { store.lastKnownStatus == .authorized }
+
+        XCTAssertEqual(store.lastKnownStatus, .authorized)
+    }
+
     private func makeViewModel(
         automation: KeynoteAutomationPermissionState,
         microphone: PermissionStatus,
-        speech: PermissionStatus
+        speech: PermissionStatus,
+        store: MockKeynoteAutomationStatusStore =
+            MockKeynoteAutomationStatusStore(initial: .notDetermined)
     ) -> PermissionsSheetViewModel {
         PermissionsSheetViewModel(
             automationPermissionService: StubAutomationPermissionService(
@@ -73,7 +89,8 @@ final class PermissionsSheetViewModelTests: XCTestCase {
             ),
             speechPermissionService: StubSpeechRecognitionPermissionService(
                 status: speech
-            )
+            ),
+            automationStatusStore: store
         )
     }
 }
