@@ -41,7 +41,8 @@ struct PracticeOverlayView: View {
 
                 PracticeWPMIndicatorView(
                     wpm: viewModel.currentWPM,
-                    status: viewModel.wpmStatus
+                    status: viewModel.wpmStatus,
+                    isReconnecting: viewModel.isReconnecting
                 )
             }
             .padding(.horizontal, AppSpacing.xl)

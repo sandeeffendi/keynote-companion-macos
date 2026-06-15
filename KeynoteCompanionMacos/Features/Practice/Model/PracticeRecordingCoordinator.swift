@@ -35,8 +35,29 @@ actor PracticeRecordingCoordinator {
     private var activeRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isSessionActive = false
 
+    // Media time of the last committed word — drives the liveness watchdog. The
+    // recognition stream is healthy if a task is armed (the user may simply be
+    // silent), so the watchdog only acts on "no words AND no task-end for a while".
+    private var lastProgressMedia: TimeInterval = 0
+    private var recognitionHealth: RecognitionHealth = .live
+
+    private var recognitionSupervisorTask: Task<Void, Never>?
     private var slidePollingTask: Task<Void, Never>?
     private var stateContinuation: AsyncStream<PracticeSessionState>.Continuation?
+
+    /// One recognition task's lifecycle, delivered in order to a single consumer so
+    /// ingest is serialized (no non-FIFO Task-hop races) and a finished task can't
+    /// leak a late word into the next one.
+    private enum RecognitionEvent: Sendable {
+        case words(Int)
+        case ended(error: Bool)
+    }
+
+    private enum RecognitionOutcome: Sendable {
+        case endedNormally
+        case endedWithError
+        case stalled
+    }
 
     convenience init() {
         self.init(
@@ -79,6 +100,8 @@ actor PracticeRecordingCoordinator {
         beginSessionClocks()
         history = []
         maxCountCurrentTask = 0
+        lastProgressMedia = 0
+        recognitionHealth = .live
         slideIntervals = []
 
         // Detect initial slide
@@ -107,11 +130,17 @@ actor PracticeRecordingCoordinator {
             return
         }
 
-        do {
-            try await beginRecognition(request: request)
-        } catch {
-            log.error("startRecognition failed: \(error.localizedDescription, privacy: .public)")
+        // Arm the first recognition task synchronously so the stream is live the moment
+        // start() returns, then hand its events to the supervisor, which owns every
+        // rotation and retry from here on. A failed first arm still launches the
+        // supervisor so it can recover once the recognizer becomes available.
+        let firstEvents = await armRecognition(request: request)
+        if firstEvents == nil {
+            recognitionHealth = .reconnecting
             emit(.speechUnavailable)
+        }
+        recognitionSupervisorTask = Task { [weak self] in
+            await self?.runRecognitionSupervisor(firstEvents: firstEvents)
         }
 
         startSlidePolling()
@@ -133,6 +162,8 @@ actor PracticeRecordingCoordinator {
     func stop() async -> PracticeResult {
         emit(.finishing)
         isSessionActive = false
+        recognitionSupervisorTask?.cancel()
+        recognitionSupervisorTask = nil
         slidePollingTask?.cancel()
         slidePollingTask = nil
 
@@ -175,6 +206,12 @@ actor PracticeRecordingCoordinator {
         currentSlideNumber
     }
 
+    /// Live recognition health, sampled by the view model so the indicator can show a
+    /// "reconnecting" affordance instead of a misleading 0 while recognition is down.
+    func recognitionStatus() -> RecognitionHealth {
+        recognitionHealth
+    }
+
     // MARK: - Private
 
     // Mutating methods on the value-type clock/calculator must run in a synchronous
@@ -193,58 +230,127 @@ actor PracticeRecordingCoordinator {
         clock.resume()
     }
 
-    private func beginRecognition(request: SFSpeechAudioBufferRecognitionRequest) async throws {
-        try await speechService.startRecognition(
-            request: request,
-            onWordCount: { [weak self] count in
-                guard let self else { return }
-                Task { await self.handleWordCountUpdate(count) }
-            },
-            onTaskEnded: { [weak self] endedWithError in
-                guard let self else { return }
-                Task { await self.handleTaskEnded(endedWithError: endedWithError) }
+    /// Owns the whole recognition lifecycle for the session: consume the current
+    /// task's events, then rotate to a fresh task — forever while the session is
+    /// active. A recognizer that ends (normal final on a speech pause), errors, or
+    /// silently stalls is always re-armed, so the live stream can never die for good.
+    private func runRecognitionSupervisor(firstEvents: AsyncStream<RecognitionEvent>?) async {
+        var pendingEvents = firstEvents
+        var errorBackoff = PracticeTuning.recognitionErrorBackoffBaseNanos
+
+        while isSessionActive && !Task.isCancelled {
+            let events: AsyncStream<RecognitionEvent>
+            if let pending = pendingEvents {
+                events = pending
+            } else {
+                // Rotate: swap a fresh request into the live audio tap immediately (no
+                // pre-sleep) so no spoken audio is dropped between tasks.
+                let request = SFSpeechAudioBufferRecognitionRequest()
+                activeRequest = request
+                await audioService.updateSpeechRequest(request)
+                guard let armed = await armRecognition(request: request) else {
+                    // Transient arm failure (e.g. recognizer momentarily unavailable):
+                    // back off and retry; never give up while the session is active.
+                    recognitionHealth = .reconnecting
+                    try? await Task.sleep(nanoseconds: errorBackoff)
+                    errorBackoff = min(errorBackoff * 2, PracticeTuning.recognitionErrorBackoffCapNanos)
+                    continue
+                }
+                errorBackoff = PracticeTuning.recognitionErrorBackoffBaseNanos
+                events = armed
             }
-        )
+            pendingEvents = nil
+
+            let outcome = await consumeTaskEvents(events)
+            await speechService.stopRecognition()
+            guard isSessionActive && !Task.isCancelled else { break }
+
+            switch outcome {
+            case .endedWithError:
+                recognitionHealth = .reconnecting
+                try? await Task.sleep(nanoseconds: PracticeTuning.recognitionErrorBackoffBaseNanos)
+            case .endedNormally, .stalled:
+                // A normal final (typical at a speech pause) or a watchdog rotation.
+                // We can't distinguish a silent-but-alive task from a dead one, so a
+                // stall rotates quietly without flagging "reconnecting".
+                recognitionHealth = .live
+                try? await Task.sleep(nanoseconds: PracticeTuning.recognitionMinRestartIntervalNanos)
+            }
+        }
+    }
+
+    /// Arms one recognition task and returns its ordered event stream, or `nil` if the
+    /// recognizer refused to start. Resets the per-task high-water mark so the new
+    /// task's cumulative count starts from zero.
+    private func armRecognition(request: SFSpeechAudioBufferRecognitionRequest) async -> AsyncStream<RecognitionEvent>? {
+        maxCountCurrentTask = 0
+        lastProgressMedia = clock.now()
+        let (events, continuation) = AsyncStream<RecognitionEvent>.makeStream()
+        do {
+            try await speechService.startRecognition(
+                request: request,
+                onWordCount: { continuation.yield(.words($0)) },
+                onTaskEnded: { continuation.yield(.ended(error: $0)); continuation.finish() }
+            )
+            recognitionHealth = .live
+            return events
+        } catch {
+            log.error("startRecognition failed: \(error.localizedDescription, privacy: .public)")
+            continuation.finish()
+            return nil
+        }
+    }
+
+    /// Consumes one task's events on a single serialized reader (so ingest is FIFO and
+    /// a finished task can't leak a late word) while a watchdog races it: if no word
+    /// and no task-end arrive within `recognitionStallSeconds` of media time, the task
+    /// is treated as stalled so the supervisor can rotate it.
+    private func consumeTaskEvents(_ events: AsyncStream<RecognitionEvent>) async -> RecognitionOutcome {
+        await withTaskGroup(of: RecognitionOutcome.self) { group in
+            group.addTask { [weak self] in
+                for await event in events {
+                    switch event {
+                    case .words(let count):
+                        await self?.handleWordCountUpdate(count)
+                    case .ended(let error):
+                        return error ? .endedWithError : .endedNormally
+                    }
+                }
+                return .endedNormally
+            }
+            group.addTask { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: PracticeTuning.recognitionWatchdogPollNanos)
+                    if await self?.isRecognitionStalled() == true { return .stalled }
+                }
+                return .endedNormally
+            }
+            let outcome = await group.next() ?? .endedNormally
+            group.cancelAll()
+            return outcome
+        }
+    }
+
+    private func isRecognitionStalled() -> Bool {
+        guard isSessionActive, !clock.isPaused else { return false }
+        return clock.now() - lastProgressMedia > PracticeTuning.recognitionStallSeconds
     }
 
     private func handleWordCountUpdate(_ count: Int) {
-        // A word-update Task may hop in after stop(); drop it so it can't append to
-        // history past the captured result or bleed into a later session.
+        // A word-update may arrive after stop(); drop it so it can't append to history
+        // past the captured result or bleed into a later session.
         guard isSessionActive else { return }
+        // The recognizer reports an absolute, sometimes-revised cumulative count for
+        // the current task; commit only increases. The serialized event stream means
+        // a previous task's stream is finished before the next is armed, so the
+        // high-water reset in armRecognition() can't race an in-flight update.
         guard count > maxCountCurrentTask else { return }
         let newWords = count - maxCountCurrentTask
         maxCountCurrentTask = count
         let now = clock.now()
+        lastProgressMedia = now
         history.append(contentsOf: Array(repeating: now, count: newWords))
         log.debug("Word count update: \(count) (+\(newWords) at \(now, format: .fixed(precision: 2)))")
-    }
-
-    private func handleTaskEnded(endedWithError: Bool) async {
-        guard isSessionActive else { return }
-        // Words from the ended task are already in `history`; reset the high-water
-        // mark so the next task's cumulative count starts from zero.
-        maxCountCurrentTask = 0
-
-        // Always throttle the restart so a recognizer that ends rapidly (final OR
-        // error) can't spin in a tight loop. The normal-end floor is small to keep
-        // the recognition gap short (dropping few words from the window); errors
-        // back off longer.
-        let backoff = endedWithError
-            ? PracticeTuning.recognitionErrorBackoffNanos
-            : PracticeTuning.recognitionRestartDelayNanos
-        try? await Task.sleep(nanoseconds: backoff)
-        guard isSessionActive else { return }
-
-        let newRequest = SFSpeechAudioBufferRecognitionRequest()
-        activeRequest = newRequest
-        await audioService.updateSpeechRequest(newRequest)
-
-        do {
-            try await beginRecognition(request: newRequest)
-            log.info("Recognition restarted after task end (history words: \(self.history.count), error: \(endedWithError))")
-        } catch {
-            log.error("Recognition restart failed: \(error.localizedDescription, privacy: .public)")
-        }
     }
 
     private func startSlidePolling() {

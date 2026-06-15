@@ -15,6 +15,9 @@ final class PracticeViewModel: ObservableObject {
     @Published private(set) var currentSlide: Int = 1
     @Published private(set) var isRecording: Bool = false
     @Published private(set) var isPaused: Bool = false
+    /// True while speech recognition is down and re-arming, so the indicator can show
+    /// a "reconnecting" state instead of a misleading 0 WPM.
+    @Published private(set) var isReconnecting: Bool = false
 
     private let coordinator: PracticeRecordingCoordinator
     private var observationTask: Task<Void, Never>?
@@ -79,15 +82,15 @@ final class PracticeViewModel: ObservableObject {
     // MARK: - Private
 
     private func startObservation() {
+        // Task created from this @MainActor method inherits MainActor isolation, so the
+        // loop body already runs on the main actor — no inner MainActor.run needed.
         observationTask = Task { [weak self] in
             guard let self else { return }
             let stream = await self.coordinator.stateStream
             for await state in stream {
                 guard !Task.isCancelled else { break }
-                await MainActor.run {
-                    if case .finished = state {
-                        self.isRecording = false
-                    }
+                if case .finished = state {
+                    self.isRecording = false
                 }
             }
         }
@@ -106,11 +109,13 @@ final class PracticeViewModel: ObservableObject {
                 let elapsed = await self.coordinator.elapsedSeconds()
                 let wpm = await self.coordinator.sampleWPM()
                 let slide = await self.coordinator.currentSlide()
+                let health = await self.coordinator.recognitionStatus()
 
                 self.elapsedTime = self.formatElapsed(elapsed)
                 self.currentWPM = wpm
                 self.wpmStatus = self.wpmStatus.next(for: wpm)
                 self.currentSlide = slide
+                self.isReconnecting = (health == .reconnecting)
             }
         }
     }

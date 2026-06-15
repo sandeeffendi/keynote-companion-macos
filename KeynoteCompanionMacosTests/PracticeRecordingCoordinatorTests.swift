@@ -105,6 +105,48 @@ final class PracticeRecordingCoordinatorTests: XCTestCase {
         XCTAssertTrue(updatedRequests.isEmpty)
     }
 
+    func testRecognitionRecoversAfterTransientStartFailure() async throws {
+        // Regression: a failed re-arm used to be swallowed, leaving WPM at 0 forever.
+        let wall = TestWall()
+        let speech = MockSpeechRecognitionService()
+        await speech.setFailNextStarts(1) // first arm throws, supervisor must retry
+        let coordinator = makeCoordinator(speech: speech, clock: MediaClock(wallNow: wall.source()))
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+
+        let retried = await waitUntil { await speech.startCallCount >= 2 }
+        XCTAssertTrue(retried, "Supervisor must re-arm after a failed recognition start")
+
+        wall.advance(to: 3)
+        await speech.simulateWordCount(12)
+        let resumed = await waitUntil { await coordinator.sampleWPM() > 0 }
+        XCTAssertTrue(resumed, "Ingest must resume once recognition recovers")
+
+        _ = await coordinator.stop()
+    }
+
+    func testWatchdogRotatesStalledRecognition() async throws {
+        // Regression: a silently stalled task (no words, no end) used to freeze WPM at 0.
+        let wall = TestWall()
+        let speech = MockSpeechRecognitionService()
+        let coordinator = makeCoordinator(speech: speech, clock: MediaClock(wallNow: wall.source()))
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        let armed = await waitUntil { await speech.startCallCount == 1 }
+        XCTAssertTrue(armed)
+
+        wall.advance(to: 1)
+        await speech.simulateWordCount(4)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        // Advance media time past the stall threshold with no further words and no end.
+        wall.advance(to: 1 + PracticeTuning.recognitionStallSeconds + 2)
+
+        let rotated = await waitUntil(timeout: 6) { await speech.startCallCount >= 2 }
+        XCTAssertTrue(rotated, "Watchdog must rotate a stalled recognition task so ingest can resume")
+
+        _ = await coordinator.stop()
+    }
+
     func testPauseFreezesMediaTimeAndResumeContinues() async throws {
         let wall = TestWall()
         let coordinator = makeCoordinator(clock: MediaClock(wallNow: wall.source()))
@@ -200,9 +242,16 @@ private actor MockSpeechRecognitionService: SpeechRecognizing {
     private(set) var requests: [SFSpeechAudioBufferRecognitionRequest] = []
     private var onWordCount: (@Sendable (Int) -> Void)?
     private var onTaskEnded: (@Sendable (Bool) -> Void)?
+    private var failNextStarts = 0
 
     func requestAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
         .authorized
+    }
+
+    /// Make the next `n` `startRecognition` calls throw, simulating a transiently
+    /// unavailable recognizer.
+    func setFailNextStarts(_ n: Int) {
+        failNextStarts = n
     }
 
     func startRecognition(
@@ -212,6 +261,10 @@ private actor MockSpeechRecognitionService: SpeechRecognizing {
     ) async throws {
         startCallCount += 1
         requests.append(request)
+        if failNextStarts > 0 {
+            failNextStarts -= 1
+            throw SpeechRecognitionError.recognizerUnavailable
+        }
         self.onWordCount = onWordCount
         self.onTaskEnded = onTaskEnded
     }

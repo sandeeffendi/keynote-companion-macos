@@ -133,10 +133,11 @@ enum PracticeSessionState: Sendable {
 /// One place to tune the live WPM behavior. Live and recap read these so the
 /// numbers stay consistent and are easy to adjust after real-session testing.
 enum PracticeTuning {
-    /// Live sliding-window length (seconds).
-    static let windowSeconds: TimeInterval = 15
-    /// EMA smoothing factor for the live indicator (0 disables smoothing).
-    static let emaAlpha: Double = 0.3
+    /// Live sliding-window length (seconds). Shorter = more responsive / snappier.
+    static let windowSeconds: TimeInterval = 10
+    /// EMA smoothing factor for the live indicator (0 disables smoothing). Higher =
+    /// rises faster / tracks pace changes quicker, slightly less smooth.
+    static let emaAlpha: Double = 0.45
     /// How often the live indicator recomputes against "now".
     static let liveRefreshInterval: Duration = .milliseconds(500)
     /// Ideal speaking-pace band (gross WPM).
@@ -145,11 +146,31 @@ enum PracticeTuning {
     /// Extra WPM beyond a band edge required before the status switches — prevents
     /// the more volatile instantaneous metric from flickering the indicator color.
     static let statusHysteresis = 5
-    /// Minimum delay before re-arming recognition after a normal (final) end — a
-    /// floor that stops a rapidly-finalizing recognizer from spinning in a loop.
-    static let recognitionRestartDelayNanos: UInt64 = 150_000_000
-    /// Longer back-off when recognition ended with an error.
-    static let recognitionErrorBackoffNanos: UInt64 = 500_000_000
+
+    // MARK: Recognition supervisor
+
+    /// Minimum gap between consecutive recognition re-arms — a rate limit that stops
+    /// a rapidly-finalizing recognizer from spinning, without delaying a normal
+    /// rotation enough to drop audible words.
+    static let recognitionMinRestartIntervalNanos: UInt64 = 120_000_000
+    /// First back-off after a failed arm / error end; doubles up to the cap.
+    static let recognitionErrorBackoffBaseNanos: UInt64 = 400_000_000
+    static let recognitionErrorBackoffCapNanos: UInt64 = 3_000_000_000
+    /// How often the liveness watchdog checks for a stalled recognition task.
+    static let recognitionWatchdogPollNanos: UInt64 = 1_000_000_000
+    /// Media seconds with neither a word nor a task-end before the watchdog rotates
+    /// the recognition task. Must exceed the recognizer's natural silence-final delay
+    /// so legitimate silence (which ends the task normally) doesn't trip it.
+    static let recognitionStallSeconds: TimeInterval = 6
+}
+
+/// Health of the live speech-recognition stream, surfaced so the UI can show a
+/// "reconnecting" affordance instead of a misleading 0 while recognition is down.
+enum RecognitionHealth: Sendable {
+    /// A recognition task is armed and the stream is flowing (the user may be silent).
+    case live
+    /// The supervisor is actively re-arming after a failed start or an error end.
+    case reconnecting
 }
 
 enum WPMStatus: Sendable {
