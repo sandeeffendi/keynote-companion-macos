@@ -8,7 +8,6 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var practiceViewModel = PracticeViewModel()
 

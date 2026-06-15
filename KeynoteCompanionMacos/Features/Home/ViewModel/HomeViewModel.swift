@@ -306,8 +306,6 @@ final class HomeViewModel: ObservableObject {
     func openSettings() {}
 
     func showActivities() {}
-    
-    func showRecap() {}
 
     func openKeynoteFile() {
         openFileTask?.cancel()
@@ -317,8 +315,6 @@ final class HomeViewModel: ObservableObject {
             await self?.openSelectedKeynoteFile(requestID: requestID)
         }
     }
-
-    func recordPractice() {}
 
     func refreshSessionStatus() async {
         guard microphonePermissionService.authorizationStatus() == .authorized else {
