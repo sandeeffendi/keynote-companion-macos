@@ -326,6 +326,11 @@ final class HomeViewModel: ObservableObject {
             return
         }
 
+        guard speechPermissionService.authorizationStatus() == .authorized else {
+            apply(.permissionMissing)
+            return
+        }
+
         let automationStatus = await automationPermissionService.authorizationStatus(
             promptIfNeeded: false
         )
@@ -366,6 +371,10 @@ final class HomeViewModel: ObservableObject {
 
             guard !Task.isCancelled else {
                 return
+            }
+
+            if runtimeStatus.hasOpenDocuments {
+                currentDocumentName = runtimeStatus.documentName
             }
 
             if runtimeStatus.hasOpenDocuments && runtimeStatus.isPlaying {

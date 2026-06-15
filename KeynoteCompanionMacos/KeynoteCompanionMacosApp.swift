@@ -14,10 +14,20 @@ struct KeynoteCompanionMacosApp: App {
     private let persistence = PersistenceController.shared
 
     init() {
+#if DEBUG
         try? Tips.resetDatastore()
+#endif
         try? Tips.configure()
+
+        let schema = Schema([HistoryModel.self, HistoryFeedback.self])
+        let config = ModelConfiguration(schema: schema)
+        container = (try? ModelContainer(
+            for: schema,
+            migrationPlan: HistoryMigrationPlan.self,
+            configurations: config
+        )) ?? (try! ModelContainer(for: schema, configurations: config))
     }
-    
+
     var body: some Scene {
         WindowGroup {
             RootView()

@@ -116,20 +116,20 @@ struct Slide: Codable, Hashable, Sendable {
     }
 }
 
-struct Feedback {
+struct Feedback: Hashable {
     let title: String
     let overall: Int
-    let unit: String //satuan
+    let unit: String
     let tips: String
     let subTitle: String
     let category: String
     let perSlide: [Slide]
 }
 
-struct Slide: Codable {
+struct Slide: Codable, Hashable {
     let no: Int
     let value: Int
-    let timestamp: TimeInterval 
+    let timestamp: TimeInterval
 }
 
 

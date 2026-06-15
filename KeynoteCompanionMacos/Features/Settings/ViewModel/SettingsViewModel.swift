@@ -9,6 +9,8 @@ import Combine
 import Foundation
 import AVFoundation
 import AppKit
+import Combine
+import Foundation
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
@@ -302,10 +304,17 @@ final class SettingsViewModel: ObservableObject {
             return
         }
 
-        updatePermissionStatus(
-            mapAutomationStatus(status),
-            for: .keynoteAutomation
-        )
+        switch status {
+        case .targetNotRunning, .keynoteUnavailable:
+            // Keynote merely being closed must not downgrade an authorized permission;
+            // keep the last-known status instead of reporting denied.
+            return
+        default:
+            updatePermissionStatus(
+                mapAutomationStatus(status),
+                for: .keynoteAutomation
+            )
+        }
     }
 
     private func clearAutomationRefreshTaskIfCurrent(requestID: UUID) {
@@ -332,9 +341,11 @@ final class SettingsViewModel: ObservableObject {
         _ status: PermissionStatus,
         for type: PermissionType
     ) {
-        guard let index = settingsData.permissionItems.firstIndex(
-            where: { $0.permissionType == type }
-        ) else {
+        guard
+            let index = settingsData.permissionItems.firstIndex(
+                where: { $0.permissionType == type }
+            )
+        else {
             return
         }
 

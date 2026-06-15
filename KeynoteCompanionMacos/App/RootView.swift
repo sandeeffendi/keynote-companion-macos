@@ -8,6 +8,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var onboardingViewModel = OnboardingViewModel()
+    @StateObject private var tourController = TourController()
     @State private var isShowingSplash = true
 
     var body: some View {
@@ -27,6 +28,19 @@ struct RootView: View {
                         ) { route in
                             AppRouteBuilder.build(route)
                         }
+                }
+                .environmentObject(tourController)
+                .overlayPreferenceValue(TourTargetPreferenceKey.self) { anchors in
+                    GeometryReader { proxy in
+                        TourOverlayView(
+                            controller: tourController,
+                            anchors: anchors,
+                            proxy: proxy
+                        )
+                    }
+                }
+                .onAppear {
+                    tourController.onFinish = { router.popToRoot() }
                 }
             }
         }
