@@ -23,7 +23,7 @@ struct RecapDetailView: View {
     
     var body: some View {
         VStack{
-            RecapWindowControlView{}.padding(.horizontal, 10) //minmaxclose
+            RecapWindowControl{}.padding(.horizontal, 10) //minmaxclose
             VStack(alignment:.leading){
                 Button{
                     backRecap()

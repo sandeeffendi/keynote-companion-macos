@@ -65,6 +65,11 @@ struct AudioPlayerView: View {
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 34, alignment: .trailing)
+            Divider().fixedSize()
+            Text("Slide 1")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 34, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

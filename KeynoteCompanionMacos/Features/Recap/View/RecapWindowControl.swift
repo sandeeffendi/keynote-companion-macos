@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct RecapWindowControlView: View {
+struct RecapWindowControl: View {
     let onHeaderActionTapped: () -> Void
 
     var body: some View {

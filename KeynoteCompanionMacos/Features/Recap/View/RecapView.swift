@@ -19,7 +19,7 @@ struct RecapView: View {
     }
     var body: some View {
         VStack{
-            RecapWindowControlView{}.padding(.horizontal, 10) //minmaxclose
+            RecapWindowControl{}.padding(.horizontal, 10) //minmaxclose
             VStack(alignment: .leading){
                 RecapHeaderView(viewModel: viewModel)
                 Text("Slides Highlights").font(.title).bold().padding(.horizontal)
