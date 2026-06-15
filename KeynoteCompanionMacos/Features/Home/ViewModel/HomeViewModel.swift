@@ -11,6 +11,7 @@ import Foundation
 final class HomeViewModel: ObservableObject {
     @Published var state: HomeViewState
     @Published var errorMessage: String?
+    @Published var isShowingPermissions = false
 
     private(set) var sessionStatus: HomeSessionStatus = .permissionMissing
     private(set) var currentDocumentName: String = ""
@@ -74,13 +75,11 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func showHelp() {}
-
-    func openSettings() {}
+    func openPermissions() {
+        isShowingPermissions = true
+    }
 
     func showActivities() {}
-    
-    func showRecap() {}
 
     func openKeynoteFile() {
         openFileTask?.cancel()
@@ -90,8 +89,6 @@ final class HomeViewModel: ObservableObject {
             await self?.openSelectedKeynoteFile(requestID: requestID)
         }
     }
-
-    func recordPractice() {}
 
     func refreshSessionStatus() async {
         guard microphonePermissionService.authorizationStatus() == .authorized else {

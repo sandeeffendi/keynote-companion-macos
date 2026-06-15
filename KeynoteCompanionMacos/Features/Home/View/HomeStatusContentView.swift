@@ -11,7 +11,7 @@ import SwiftUI
 struct HomeStatusContentView: View {
     let state: HomeViewState
     let errorMessage: String?
-    let onOpenKeynoteFileTapped: () -> Void
+    let onPrimaryAction: (HomeStatusAction) -> Void
 
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
@@ -27,16 +27,18 @@ struct HomeStatusContentView: View {
                     .font(AppFont.statusSubtitle)
                     .foregroundStyle(AppColor.textSecondary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .frame(maxWidth: AppSize.statusContentWidth)
             }
 
-            if state.showsOpenKeynoteButton {
+            if let action = state.primaryAction,
+               let title = state.primaryActionTitle {
                 PillButton(
-                    title: "Open Keynote File",
-                    role: .primary,
-                    action: onOpenKeynoteFileTapped
-                )
+                    title: title,
+                    role: .primary
+                ) {
+                    onPrimaryAction(action)
+                }
                 .padding(.top, AppSpacing.xs)
             }
 
@@ -55,14 +57,6 @@ struct HomeStatusContentView: View {
     private var statusIcon: some View {
         if let iconName = state.iconName {
             Image(systemName: iconName)
-                .font(AppFont.icon)
-                .foregroundStyle(AppColor.iconPrimary)
-                .frame(
-                    width: AppSize.iconCircleSize,
-                    height: AppSize.iconCircleSize
-                )
-        } else if let iconText = state.iconText {
-            Text(iconText)
                 .font(AppFont.icon)
                 .foregroundStyle(AppColor.iconPrimary)
                 .frame(
