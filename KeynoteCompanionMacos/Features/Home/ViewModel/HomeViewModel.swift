@@ -337,8 +337,14 @@ final class HomeViewModel: ObservableObject {
 
         switch automationStatus {
         case .authorized:
-            break
-        case .notDetermined, .denied:
+            // Determinable read — keep the cache in sync with System Settings.
+            automationStatusStore.update(.authorized)
+        case .notDetermined:
+            automationStatusStore.update(.notDetermined)
+            apply(.permissionMissing)
+            return
+        case .denied:
+            automationStatusStore.update(.denied)
             apply(.permissionMissing)
             return
         case .keynoteUnavailable:
@@ -348,7 +354,14 @@ final class HomeViewModel: ObservableObject {
             )
             return
         case .targetNotRunning:
-            apply(.noKeynoteDocument)
+            // Status is undeterminable while Keynote is closed. Fall back to the last
+            // System-Settings-synced value so a not-yet-granted permission still gates,
+            // but a merely-closed Keynote (previously authorized) does not.
+            if automationStatusStore.lastKnownStatus == .authorized {
+                apply(.noKeynoteDocument)
+            } else {
+                apply(.permissionMissing)
+            }
             return
         case .error(let status):
             apply(
