@@ -14,6 +14,10 @@ final class AppRouter: ObservableObject {
         path.last
     }
 
+    var isShowingHomeRoute: Bool {
+        AppRoute.isHomeRoute(activeRoute)
+    }
+
     func push(_ route: AppRoute) {
         path.append(route)
     }

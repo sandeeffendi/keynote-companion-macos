@@ -5,6 +5,7 @@
 //  Created by Sande Effendi on 04/06/26.
 //
 
+import AVFoundation
 import Combine
 import Foundation
 import SwiftData

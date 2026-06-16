@@ -14,7 +14,7 @@ struct HistoryView: View {
     
     init(viewModel: HistoryViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
-        
+    
     }
     
     var body: some View {

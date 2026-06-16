@@ -8,14 +8,7 @@
 import SwiftUI
 
 struct HomeHeaderView: View {
-    let onHeaderActionTapped: () -> Void
-
     var body: some View {
-        WindowHeaderView(title: "Tiempo") {
-            IconCircleButton(
-                systemName: AppIcon.headerAction,
-                action: onHeaderActionTapped
-            )
-        }
+        WindowHeaderView(title: "Tiempo")
     }
 }

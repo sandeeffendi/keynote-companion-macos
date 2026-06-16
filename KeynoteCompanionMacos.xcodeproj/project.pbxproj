@@ -21,6 +21,16 @@
 		D311530C2FC53E1900D2705F /* Tiempo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tiempo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/ML/Frameworks/whisper.xcframework,
+			);
+			target = D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000022FC9000000000002 /* KeynoteCompanionMacosTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -29,6 +39,9 @@
 		};
 		D311530E2FC53E1900D2705F /* KeynoteCompanionMacos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */,
+			);
 			path = KeynoteCompanionMacos;
 			sourceTree = "<group>";
 		};
@@ -204,9 +217,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = FJ9UDU5R7B;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -381,12 +395,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KeynoteCompanionMacos/KeynoteCompanionMacos.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z6ATD2M2J2;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -406,6 +420,7 @@
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Tiempo needs speech recognition access to measure your speaking pace during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -437,7 +452,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z6ATD2M2J2;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -457,6 +472,7 @@
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Tiempo needs speech recognition access to measure your speaking pace during presentations.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

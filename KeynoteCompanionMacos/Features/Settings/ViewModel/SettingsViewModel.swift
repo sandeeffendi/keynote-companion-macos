@@ -3,16 +3,17 @@
 //  KeynoteCompanionMacos
 //
 
-import Combine
-import Foundation
 import AVFoundation
 import AppKit
+import Combine
+import Foundation
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
 
     @Published var settingsData: SettingsModel
     private let automationPermissionService: KeynoteAutomationPermissionChecking
+    private let speechPermissionService: SpeechRecognitionPermissionChecking
     private var automationRefreshTask: Task<Void, Never>?
     private var automationRefreshRequestID: UUID?
 
@@ -22,28 +23,31 @@ final class SettingsViewModel: ObservableObject {
                 permissionItems: [
                     .microphone,
                     .keynoteAutomation,
-                    .wpmDetector
+                    .speechRecognition,
                 ]
             ),
             automationPermissionService: KeynoteAutomationPermissionService(
                 appResolver: KeynoteAppResolver()
-            )
+            ),
+            speechPermissionService: SpeechRecognitionPermissionService()
         )
     }
 
     init(
         settingsData: SettingsModel =
-        SettingsModel(
-            permissionItems: [
-                .microphone,
-                .keynoteAutomation,
-                .wpmDetector
-            ]
-        ),
-        automationPermissionService: KeynoteAutomationPermissionChecking
+            SettingsModel(
+                permissionItems: [
+                    .microphone,
+                    .keynoteAutomation,
+                    .speechRecognition,
+                ]
+            ),
+        automationPermissionService: KeynoteAutomationPermissionChecking,
+        speechPermissionService: SpeechRecognitionPermissionChecking
     ) {
         self.settingsData = settingsData
         self.automationPermissionService = automationPermissionService
+        self.speechPermissionService = speechPermissionService
         refreshAllPermissionStatuses()
     }
 
@@ -57,11 +61,13 @@ final class SettingsViewModel: ObservableObject {
             return microphoneStatus()
         case .keynoteAutomation:
             return storedStatus(for: type)
+        case .speechRecognition:
+            return speechPermissionService.authorizationStatus()
         case .wpmPlaceholder:
             return .denied
         }
     }
-    
+
     private func microphoneStatus() -> PermissionStatus {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .notDetermined:
@@ -79,7 +85,8 @@ final class SettingsViewModel: ObservableObject {
             let type = settingsData.permissionItems[index].permissionType
             let status = currentStatus(for: type)
             settingsData.permissionItems[index].status = status
-            settingsData.permissionItems[index].isEnabled = (status == .authorized)
+            settingsData.permissionItems[index].isEnabled =
+                (status == .authorized)
         }
 
         startAutomationRefresh(promptIfNeeded: false)
@@ -91,41 +98,31 @@ final class SettingsViewModel: ObservableObject {
             return currentStatus(for: type) == .authorized
         case .keynoteAutomation:
             return storedStatus(for: type) == .authorized
+        case .speechRecognition:
+            return currentStatus(for: type) == .authorized
         case .wpmPlaceholder:
             return false
         }
     }
 
-    func togglePermission(for type: PermissionType, newValue: Bool) {
-        switch type {
-        case .microphone:
-            toggleMicrophonePermission(newValue: newValue)
-        case .keynoteAutomation:
-            toggleKeynoteAutomationPermission(newValue: newValue)
-        case .wpmPlaceholder:
-            setPermissionEnabled(false, for: type)
-        }
-    }
-
-    private func toggleMicrophonePermission(newValue: Bool) {
-        let status = currentStatus(for: .microphone)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                requestPermission(for: .microphone)
-            case .denied:
-                setPermissionEnabled(false, for: .microphone)
-                openSystemSettings(for: .microphone)
-            case .authorized:
-                setPermissionEnabled(true, for: .microphone)
+    /// HIG-aligned permission intent: request the permission when it's undetermined, or
+    /// deep-link to the matching System Settings pane when it's denied. Authorized rows
+    /// are non-interactive, so this is a no-op for them.
+    func handlePermissionAction(for type: PermissionType) {
+        switch currentStatus(for: type) {
+        case .authorized:
+            return
+        case .notDetermined:
+            switch type {
+            case .microphone, .speechRecognition:
+                requestPermission(for: type)
+            case .keynoteAutomation:
+                startAutomationRefresh(promptIfNeeded: true)
+            case .wpmPlaceholder:
+                break
             }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .microphone)
-
-            if status == .authorized {
-                openSystemSettings(for: .microphone)
-            }
+        case .denied:
+            openSystemSettings(for: type)
         }
     }
 
@@ -134,6 +131,14 @@ final class SettingsViewModel: ObservableObject {
         case .microphone:
             AVCaptureDevice.requestAccess(for: .audio) { [weak self] _ in
                 Task { @MainActor [weak self] in
+                    self?.refreshAllPermissionStatuses()
+                }
+            }
+        case .speechRecognition:
+            let service = speechPermissionService
+            Task { [weak self] in
+                _ = await service.requestPermission()
+                await MainActor.run { [weak self] in
                     self?.refreshAllPermissionStatuses()
                 }
             }
@@ -146,49 +151,19 @@ final class SettingsViewModel: ObservableObject {
         let urlString: String
         switch type {
         case .microphone:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+            urlString =
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
         case .keynoteAutomation:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+            urlString =
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+        case .speechRecognition:
+            urlString =
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
         case .wpmPlaceholder:
             return
         }
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func setPermissionEnabled(
-        _ isEnabled: Bool,
-        for type: PermissionType
-    ) {
-        guard let index = settingsData.permissionItems.firstIndex(
-            where: { $0.permissionType == type }
-        ) else {
-            return
-        }
-
-        settingsData.permissionItems[index].isEnabled = isEnabled
-    }
-
-    private func toggleKeynoteAutomationPermission(newValue: Bool) {
-        let status = storedStatus(for: .keynoteAutomation)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                startAutomationRefresh(promptIfNeeded: true)
-            case .denied:
-                setPermissionEnabled(false, for: .keynoteAutomation)
-                openSystemSettings(for: .keynoteAutomation)
-            case .authorized:
-                setPermissionEnabled(true, for: .keynoteAutomation)
-            }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .keynoteAutomation)
-
-            if status == .authorized {
-                openSystemSettings(for: .keynoteAutomation)
-            }
         }
     }
 
@@ -220,10 +195,17 @@ final class SettingsViewModel: ObservableObject {
             return
         }
 
-        updatePermissionStatus(
-            mapAutomationStatus(status),
-            for: .keynoteAutomation
-        )
+        switch status {
+        case .targetNotRunning, .keynoteUnavailable:
+            // Keynote merely being closed must not downgrade an authorized permission;
+            // keep the last-known status instead of reporting denied.
+            return
+        default:
+            updatePermissionStatus(
+                mapAutomationStatus(status),
+                for: .keynoteAutomation
+            )
+        }
     }
 
     private func clearAutomationRefreshTaskIfCurrent(requestID: UUID) {
@@ -250,9 +232,11 @@ final class SettingsViewModel: ObservableObject {
         _ status: PermissionStatus,
         for type: PermissionType
     ) {
-        guard let index = settingsData.permissionItems.firstIndex(
-            where: { $0.permissionType == type }
-        ) else {
+        guard
+            let index = settingsData.permissionItems.firstIndex(
+                where: { $0.permissionType == type }
+            )
+        else {
             return
         }
 

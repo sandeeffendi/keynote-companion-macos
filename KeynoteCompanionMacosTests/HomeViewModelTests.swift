@@ -52,10 +52,25 @@ final class HomeViewModelTests: XCTestCase {
         )
     }
 
+    func testOverlayOnlyActivatesForKeynoteSlideshowActiveState() {
+        for state in HomeViewState.allCases {
+            XCTAssertEqual(
+                state.isKeynoteOverlayActive,
+                state == .keynoteSlideshowActive
+            )
+        }
+    }
+
+    func testRouteHelperTreatsRootAndHomeRouteAsShowingHome() {
+        XCTAssertTrue(AppRoute.isHomeRoute(nil))
+        XCTAssertTrue(AppRoute.isHomeRoute(.home(.main)))
+        XCTAssertFalse(AppRoute.isHomeRoute(.recap(.main(.placeholder()))))
+    }
+
     func testOpenFileCancelLeavesStateUnchanged() async {
         let viewModel = makeViewModel(
             keynoteStatuses: [
-                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false)
+                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: "")
             ],
             didOpenFile: false
         )
@@ -88,7 +103,7 @@ final class HomeViewModelTests: XCTestCase {
         let viewModel = makeViewModel(
             microphoneStatus: .denied,
             keynoteStatuses: [
-                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true)
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "")
             ]
         )
 
@@ -103,7 +118,7 @@ final class HomeViewModelTests: XCTestCase {
         let viewModel = makeViewModel(
             automationStatus: .denied,
             keynoteStatuses: [
-                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true)
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "")
             ]
         )
 
@@ -119,7 +134,7 @@ final class HomeViewModelTests: XCTestCase {
             initialState: .permissionMissing,
             automationStatus: .targetNotRunning,
             keynoteStatuses: [
-                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true)
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "")
             ]
         )
 
@@ -150,9 +165,9 @@ final class HomeViewModelTests: XCTestCase {
     func testMockedDocumentAndSlideshowStatusTransitions() async {
         let viewModel = makeViewModel(
             keynoteStatuses: [
-                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false),
-                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: false),
-                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true)
+                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: ""),
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: false, documentName: ""),
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "")
             ]
         )
 
@@ -173,9 +188,12 @@ final class HomeViewModelTests: XCTestCase {
         initialState: HomeViewState = .permissionMissing,
         microphoneStatus: PermissionStatus = .authorized,
         automationStatus: KeynoteAutomationPermissionState = .authorized,
+        speechStatus: PermissionStatus = .authorized,
         keynoteStatuses: [KeynoteRuntimeStatus],
         didOpenFile: Bool = true,
-        fileOpenResult: MockKeynoteFileOpenResult? = nil
+        fileOpenResult: MockKeynoteFileOpenResult? = nil,
+        automationStore: MockKeynoteAutomationStatusStore =
+            MockKeynoteAutomationStatusStore(initial: .authorized)
     ) -> HomeViewModel {
         HomeViewModel(
             state: initialState,
@@ -185,14 +203,81 @@ final class HomeViewModelTests: XCTestCase {
             automationPermissionService: MockAutomationPermissionService(
                 status: automationStatus
             ),
+            speechPermissionService: MockSpeechRecognitionPermissionService(
+                status: speechStatus
+            ),
             keynoteStatusService: MockKeynoteStatusService(
                 statuses: keynoteStatuses
             ),
             keynoteFileOpener: MockKeynoteFileOpener(
                 result: fileOpenResult ?? .success(didOpenFile)
             ),
+            automationStatusStore: automationStore,
             pollingIntervalNanoseconds: 1_000
         )
+    }
+
+    func testTargetNotRunningWithUnauthorizedCacheShowsPermissionMissing() async {
+        for cached in [PermissionStatus.notDetermined, .denied] {
+            let viewModel = makeViewModel(
+                automationStatus: .targetNotRunning,
+                keynoteStatuses: [],
+                automationStore: MockKeynoteAutomationStatusStore(initial: cached)
+            )
+
+            await viewModel.refreshSessionStatus()
+
+            XCTAssertEqual(
+                viewModel.state, .permissionMissing,
+                "cached \(cached) should gate to permissionMissing"
+            )
+        }
+    }
+
+    func testAuthorizedAutomationSyncsCacheToAuthorized() async {
+        let store = MockKeynoteAutomationStatusStore(initial: .notDetermined)
+        let viewModel = makeViewModel(
+            automationStatus: .authorized,
+            keynoteStatuses: [
+                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: "")
+            ],
+            automationStore: store
+        )
+
+        await viewModel.refreshSessionStatus()
+
+        XCTAssertEqual(store.lastKnownStatus, .authorized)
+    }
+
+    func testDeniedAutomationSyncsCacheAndGates() async {
+        let store = MockKeynoteAutomationStatusStore(initial: .authorized)
+        let viewModel = makeViewModel(
+            automationStatus: .denied,
+            keynoteStatuses: [],
+            automationStore: store
+        )
+
+        await viewModel.refreshSessionStatus()
+
+        XCTAssertEqual(store.lastKnownStatus, .denied)
+        XCTAssertEqual(viewModel.state, .permissionMissing)
+    }
+}
+
+final class MockKeynoteAutomationStatusStore: KeynoteAutomationStatusStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var status: PermissionStatus
+
+    init(initial: PermissionStatus = .notDetermined) {
+        self.status = initial
+    }
+
+    var lastKnownStatus: PermissionStatus {
+        lock.withLock { status }
+    }
+
+    func update(_ status: PermissionStatus) {
+        lock.withLock { self.status = status }
     }
 }
 
@@ -200,6 +285,18 @@ private struct MockMicrophonePermissionService: MicrophonePermissionChecking {
     let status: PermissionStatus
 
     func authorizationStatus() -> PermissionStatus {
+        status
+    }
+}
+
+private struct MockSpeechRecognitionPermissionService: SpeechRecognitionPermissionChecking {
+    let status: PermissionStatus
+
+    func authorizationStatus() -> PermissionStatus {
+        status
+    }
+
+    func requestPermission() async -> PermissionStatus {
         status
     }
 }
@@ -223,7 +320,7 @@ private actor MockKeynoteStatusService: KeynoteStatusChecking {
 
     func currentStatus() async throws -> KeynoteRuntimeStatus {
         if statuses.isEmpty {
-            return KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false)
+            return KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: "")
         }
 
         return statuses.removeFirst()

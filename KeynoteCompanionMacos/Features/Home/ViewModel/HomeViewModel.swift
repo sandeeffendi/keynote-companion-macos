@@ -11,13 +11,17 @@ import Foundation
 final class HomeViewModel: ObservableObject {
     @Published var state: HomeViewState
     @Published var errorMessage: String?
+    @Published var isShowingPermissions = false
 
     private(set) var sessionStatus: HomeSessionStatus = .permissionMissing
+    private(set) var currentDocumentName: String = ""
 
     private let microphonePermissionService: MicrophonePermissionChecking
     private let automationPermissionService: KeynoteAutomationPermissionChecking
+    private let speechPermissionService: SpeechRecognitionPermissionChecking
     private let keynoteStatusService: KeynoteStatusChecking
     private let keynoteFileOpener: KeynoteFileOpening
+    private let automationStatusStore: KeynoteAutomationStatusStoring
     private let pollingIntervalNanoseconds: UInt64
 
     private var openFileTask: Task<Void, Never>?
@@ -31,8 +35,10 @@ final class HomeViewModel: ObservableObject {
             automationPermissionService: KeynoteAutomationPermissionService(
                 appResolver: appResolver
             ),
+            speechPermissionService: SpeechRecognitionPermissionService(),
             keynoteStatusService: KeynoteStatusService(appResolver: appResolver),
             keynoteFileOpener: KeynoteFileOpener(appResolver: appResolver),
+            automationStatusStore: UserDefaultsKeynoteAutomationStatusStore(),
             pollingIntervalNanoseconds: 1_000_000_000
         )
     }
@@ -41,15 +47,20 @@ final class HomeViewModel: ObservableObject {
         state: HomeViewState,
         microphonePermissionService: MicrophonePermissionChecking,
         automationPermissionService: KeynoteAutomationPermissionChecking,
+        speechPermissionService: SpeechRecognitionPermissionChecking,
         keynoteStatusService: KeynoteStatusChecking,
         keynoteFileOpener: KeynoteFileOpening,
+        automationStatusStore: KeynoteAutomationStatusStoring =
+            UserDefaultsKeynoteAutomationStatusStore(),
         pollingIntervalNanoseconds: UInt64 = 1_000_000_000
     ) {
         self.state = state
         self.microphonePermissionService = microphonePermissionService
         self.automationPermissionService = automationPermissionService
+        self.speechPermissionService = speechPermissionService
         self.keynoteStatusService = keynoteStatusService
         self.keynoteFileOpener = keynoteFileOpener
+        self.automationStatusStore = automationStatusStore
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
     }
 
@@ -69,9 +80,9 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func showHelp() {}
-
-    func openSettings() {}
+    func openPermissions() {
+        isShowingPermissions = true
+    }
 
     func showActivities() {}
     
@@ -86,10 +97,13 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func recordPractice() {}
-
     func refreshSessionStatus() async {
         guard microphonePermissionService.authorizationStatus() == .authorized else {
+            apply(.permissionMissing)
+            return
+        }
+
+        guard speechPermissionService.authorizationStatus() == .authorized else {
             apply(.permissionMissing)
             return
         }
@@ -104,8 +118,14 @@ final class HomeViewModel: ObservableObject {
 
         switch automationStatus {
         case .authorized:
-            break
-        case .notDetermined, .denied:
+            // Determinable read — keep the cache in sync with System Settings.
+            automationStatusStore.update(.authorized)
+        case .notDetermined:
+            automationStatusStore.update(.notDetermined)
+            apply(.permissionMissing)
+            return
+        case .denied:
+            automationStatusStore.update(.denied)
             apply(.permissionMissing)
             return
         case .keynoteUnavailable:
@@ -115,7 +135,14 @@ final class HomeViewModel: ObservableObject {
             )
             return
         case .targetNotRunning:
-            apply(.noKeynoteDocument)
+            // Status is undeterminable while Keynote is closed. Fall back to the last
+            // System-Settings-synced value so a not-yet-granted permission still gates,
+            // but a merely-closed Keynote (previously authorized) does not.
+            if automationStatusStore.lastKnownStatus == .authorized {
+                apply(.noKeynoteDocument)
+            } else {
+                apply(.permissionMissing)
+            }
             return
         case .error(let status):
             apply(
@@ -134,6 +161,10 @@ final class HomeViewModel: ObservableObject {
 
             guard !Task.isCancelled else {
                 return
+            }
+
+            if runtimeStatus.hasOpenDocuments {
+                currentDocumentName = runtimeStatus.documentName
             }
 
             if runtimeStatus.hasOpenDocuments && runtimeStatus.isPlaying {

@@ -12,18 +12,24 @@ import SwiftData
 @main
 struct KeynoteCompanionMacosApp: App {
     @StateObject private var router = AppRouter()
+    private let container: ModelContainer
 
     init() {
+#if DEBUG
         try? Tips.resetDatastore()
+#endif
         try? Tips.configure()
+
+        let schema = Schema([HistoryModel.self, Feedback.self])
+        let config = ModelConfiguration("TiempoDB", schema: schema)
+        container = try! ModelContainer(for: schema, configurations: config)
     }
-    
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(router)
-                .modelContainer(for: [HistoryModel.self, Feedback.self])
-                .preferredColorScheme(.light)
+                .modelContainer(container)
         }
         .defaultSize(
             width: AppSize.splashWindowWidth,

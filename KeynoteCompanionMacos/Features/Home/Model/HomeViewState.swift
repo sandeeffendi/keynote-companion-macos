@@ -15,6 +15,14 @@ enum HomeViewState: CaseIterable {
     case keynoteSlideshowActive
 }
 
+/// The single call-to-action surfaced in the center of each home state.
+/// `nil` means the state has no button (the user must act in Keynote itself).
+enum HomeStatusAction {
+    case openPermissions
+    case openKeynoteFile
+    case recordPractice
+}
+
 extension HomeViewState {
     var title: String {
         switch self {
@@ -33,13 +41,14 @@ extension HomeViewState {
         switch self {
         case .permissionMissing:
             return
-                "Allow microphone and Keynote Automation access to record your voice and detect your slideshow"
+                "Click 'Open Permissions' to grant Microphone, Speech, and Keynote access to track your presentation practice."
         case .noKeynoteFileOpen:
-            return "Open a keynote file that you want to present"
+            return
+                "Click 'Open Keynote File' to open a keynote file that you want to present."
         case .noKeynoteSlideshowActive:
-            return "Start to slideshow a keynote"
+            return "Start to slideshow a keynote."
         case .keynoteSlideshowActive:
-            return "Click 'Record Practice' to start practicing"
+            return "Click 'Record Practice' to start practicing."
         }
     }
 
@@ -56,24 +65,29 @@ extension HomeViewState {
         }
     }
 
-    var iconText: String? {
+    var primaryAction: HomeStatusAction? {
         switch self {
+        case .permissionMissing:
+            return .openPermissions
         case .noKeynoteFileOpen:
-            return "!!!"
+            return .openKeynoteFile
         case .noKeynoteSlideshowActive:
-            return "!!"
-        case .permissionMissing, .keynoteSlideshowActive:
             return nil
+        case .keynoteSlideshowActive:
+            return .recordPractice
         }
     }
 
-    var showsOpenKeynoteButton: Bool {
-        switch self {
-        case .noKeynoteFileOpen:
-            return true
-        case .permissionMissing, .noKeynoteSlideshowActive,
-            .keynoteSlideshowActive:
-            return false
+    var primaryActionTitle: String? {
+        switch primaryAction {
+        case .openPermissions:
+            return "Open Permissions"
+        case .openKeynoteFile:
+            return "Open Keynote File"
+        case .recordPractice:
+            return "Record Practice"
+        case .none:
+            return nil
         }
     }
 
@@ -82,6 +96,27 @@ extension HomeViewState {
         case .keynoteSlideshowActive:
             return true
         case .permissionMissing, .noKeynoteFileOpen, .noKeynoteSlideshowActive:
+            return false
+        }
+    }
+
+    var isKeynoteOverlayActive: Bool {
+        switch self {
+        case .keynoteSlideshowActive:
+            return true
+        case .permissionMissing, .noKeynoteFileOpen, .noKeynoteSlideshowActive:
+            return false
+        }
+    }
+
+    /// Once Keynote is involved it tends to come frontmost (opening a file launches
+    /// Keynote, and the in-app file picker hands focus back to it). Float the Tiempo
+    /// window above other apps for these states so the user never loses it behind Keynote.
+    var shouldFloatAboveOtherApps: Bool {
+        switch self {
+        case .noKeynoteFileOpen, .noKeynoteSlideshowActive:
+            return true
+        case .permissionMissing, .keynoteSlideshowActive:
             return false
         }
     }

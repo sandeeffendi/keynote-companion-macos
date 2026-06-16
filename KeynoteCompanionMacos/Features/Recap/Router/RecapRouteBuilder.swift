@@ -20,7 +20,6 @@ struct RecapRouteBuilder {
                 RecapView(viewModel: RecapViewModel())
             case .detail:
                 RecapDetailView(viewModel: RecapDetailViewModel())
-            
         }
 
     }
