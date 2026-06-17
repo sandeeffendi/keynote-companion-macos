@@ -9,11 +9,12 @@ protocol KeynoteSlideshowStarting: Sendable {
     func startSlideshow() async throws
 }
 
-/// Starts the front Keynote document's slideshow (from the first slide) via AppleScript.
-/// Mirrors the throwing actor + `appResolver` pattern of `KeynoteSlideTrackingService` so
-/// failures surface as `KeynoteStatusError` and the Home flow can show them to the user.
-/// The `start slideshow` command mirrors the existing `KeynoteSlideshowStopService`'s
-/// `stop slideshow`; uses the `front document` → `document 1` fallback convention.
+/// Starts the front Keynote document's slideshow from the first slide via AppleScript.
+/// Keynote's `start slideshow` plays from the currently-selected slide, so we first set
+/// `current slide` to slide 1 to force a from-the-top run. Mirrors the throwing actor +
+/// `appResolver` pattern of `KeynoteSlideTrackingService` so failures surface as
+/// `KeynoteStatusError` and the Home flow can show them to the user; uses the
+/// `front document` → `document 1` fallback convention (`stop slideshow` sibling).
 actor KeynoteSlideshowStartService: KeynoteSlideshowStarting {
     private let appResolver: KeynoteAppResolving
 
@@ -42,11 +43,13 @@ actor KeynoteSlideshowStartService: KeynoteSlideshowStarting {
         tell application id "\(bundleIdentifier)"
             try
                 tell front document
+                    set current slide to slide 1
                     start slideshow
                 end tell
             on error
                 try
                     tell document 1
+                        set current slide to slide 1
                         start slideshow
                     end tell
                 end try
