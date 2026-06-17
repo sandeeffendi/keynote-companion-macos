@@ -26,7 +26,7 @@ struct PracticeResult: Sendable {
 
     var finalWordCount: Int { wordTimestamps.count }
 
-    func toRecapModel() -> RecapModel {
+    func toRecapModel() -> HistoryModel {
         let now = Date()
         let perSlide = perSlideWithAttempts()
 
@@ -41,19 +41,11 @@ struct PracticeResult: Sendable {
             ? "Your overall pace was slow. Try maintaining a steady rhythm."
             : "Great job! Your speaking pace was in the ideal range."
 
-        let wpmSubTitle = overallWPM > 120
-            ? "Your average pace was too fast"
-            : overallWPM < 90
-            ? "Your average pace was too slow"
-            : "Your average pace was ideal"
-
         let feedback = Feedback(
-            title: "Speaking Pace",
+            category: "WPM",
             overall: overallWPM,
             unit: "WPM",
             tips: wpmTip,
-            subTitle: wpmSubTitle,
-            category: "WPM",
             perSlide: perSlide
         )
 
@@ -113,7 +105,10 @@ struct PracticeResult: Sendable {
             let wpm = total.duration > 0
                 ? Int((Double(total.words) / total.duration) * 60)
                 : 0
-            return Slide(no: slideNumber, value: wpm, timestamp: total.firstStart)
+            return Slide(
+                page: slideNumber,
+                attempt: [Attempt(no: 1, value: String(wpm), timestamp: total.firstStart)]
+            )
         }
     }
 

@@ -5,6 +5,7 @@
 //  Created by Sande Effendi on 04/06/26.
 //
 
+import Foundation
 import SwiftUI
 
 struct RecapRouteBuilder {
@@ -16,5 +17,6 @@ struct RecapRouteBuilder {
         case .fromHistory(let recapModel):
             RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: recapModel))
         }
+
     }
 }

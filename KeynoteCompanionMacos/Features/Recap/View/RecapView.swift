@@ -11,14 +11,9 @@ import SwiftUI
 import AppKit
 
 struct RecapView: View {
-    @EnvironmentObject private var route: AppRouter
-    var isFromHistory: Bool
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: RecapViewModel
-    @Environment(\.modelContext) private var modelContext
-    let saveTip = SaveSessionTip()
-    let newTip = NewSessionTip()
-    @State private var saveToHistory: Bool = false
-    @State private var showSavedToast: Bool = false
+    let prev: RecapRoute
 
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
@@ -29,8 +24,8 @@ struct RecapView: View {
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
         self.isFromHistory = isFromHistory
         _viewModel = StateObject(wrappedValue: viewModel)
+        self.prev = prev
     }
-
     var body: some View {
         VStack(spacing: 0) {
             // Header shares the same horizontal inset as the content below so the
@@ -260,6 +255,7 @@ struct RecapView: View {
             audioPlayer
         }
     }
+    
 
     private var audioPlayer: some View {
         HStack(spacing: AppSpacing.md) {
