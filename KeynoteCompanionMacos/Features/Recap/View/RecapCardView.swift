@@ -39,7 +39,6 @@ struct RecapCardView: View {
     
     private func showDetail(){
         viewModel.showDetail()
-        router.pop()
         router.push(.recap(.detail))
         
     }

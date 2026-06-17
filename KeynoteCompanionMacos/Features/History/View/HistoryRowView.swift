@@ -54,7 +54,7 @@ struct HistoryRowView: View {
     
     private func historyDetail(){
         router.pop()
-        router.push(.history(.historyDetail))
+        router.push(.recap(.historyDetail))
     }
 }
 

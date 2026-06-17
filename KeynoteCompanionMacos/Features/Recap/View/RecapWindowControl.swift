@@ -11,7 +11,7 @@ struct RecapWindowControl: View {
     let onHeaderActionTapped: () -> Void
 
     var body: some View {
-        WindowHeaderView(title: "Tiempo") {        }
+        WindowHeaderView(title: "Tiempo")
     }
 }
 

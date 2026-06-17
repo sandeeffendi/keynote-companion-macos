@@ -20,9 +20,9 @@ struct RecapView: View {
         self.prev = prev
     }
     var body: some View {
-        VStack{
-            RecapWindowControl{}.padding(.horizontal, 10) //minmaxclose
+        VStack{ //minmaxclose
             VStack(alignment: .leading){
+                RecapWindowControl{}
                 RecapHeaderView(viewModel: viewModel, prev: prev)
                 Text("Slides Highlights").font(.title).bold().padding(.horizontal)
                 HStack(spacing:10){
@@ -32,7 +32,7 @@ struct RecapView: View {
                 Text("Replay your session").font(.title3).padding(.horizontal).padding(.top)
                 AudioPlayerView(viewModel: viewModel.audioViewModel)
                 RecapFooterView(viewModel: viewModel)
-            }.padding(.horizontal,24).padding(.bottom,24)
+            }.padding(24)
         }
     }
     
@@ -40,6 +40,6 @@ struct RecapView: View {
 }
 
 #Preview {
-    RecapView(viewModel: RecapViewModel(),prev: .main).frame(maxWidth: 700, minHeight: 740)
+    RecapView(viewModel: RecapViewModel(),prev: .detail).frame(maxWidth: 700, minHeight: 740)
         .environmentObject(AppRouter())
 }

@@ -23,10 +23,28 @@ struct RecapHeaderView: View {
                     Image(systemName: "chevron.left").foregroundStyle(AppColor.textPrimary).font(.title).padding(5)
                 }.clipShape(Circle())
                 Spacer()
-                Button{
-                }label:{
-                    Image(systemName: "ellipsis").font(.title).padding(12)
-                }.clipShape(Circle())
+                Menu {
+                    Button(role: .destructive) {
+                        // delete
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    
+                    Button {
+                        // rename
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.title)
+                        .padding(12)
+                        .contentShape(Circle())
+                }
+                .clipShape(Circle())
+                .buttonStyle(.plain)
+                //.background(Circle().fill(.white.opacity(0.15)))
+                
             }.frame(maxWidth: .infinity).padding(.bottom)
         }
         VStack(alignment: .leading) {

@@ -17,7 +17,7 @@ struct RecapRouteBuilder {
             case .home:
                 HomeView(viewModel: HomeViewModel())
             case .historyDetail:
-                RecapView(viewModel: RecapViewModel(), prev: .main)
+                RecapView(viewModel: RecapViewModel(), prev: .historyDetail)
             case .detail:
             RecapDetailView(viewModel: RecapDetailViewModel(), prev: .detail)
         }

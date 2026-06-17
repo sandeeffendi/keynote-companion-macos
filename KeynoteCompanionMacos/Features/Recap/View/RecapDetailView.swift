@@ -23,34 +23,35 @@ struct RecapDetailView: View {
     @State private var selectedFilter: String = "All"
     
     var body: some View {
-        VStack{
-            RecapWindowControl{}.padding(.horizontal, 10) //minmaxclose
+        VStack{ //minmaxclose
             VStack(alignment:.leading){
+                RecapWindowControl{}
                 Button{
-                    prev = .main {
                         backRecap()
-                        
-                    }
                 }label:{
                     Image(systemName: "chevron.left").foregroundStyle(AppColor.textPrimary).font(.title).padding(5)
                 }.clipShape(Circle()).padding(.bottom, 16)
-                HStack{
-                    Text("Practice 1 Speaking Rate").font(.largeTitle).bold()
-                    Spacer()
-                    Menu{
-                        Picker("Slides Filter", selection: $selectedFilter) {
-                            Text("All Slides").tag("all")
-                            Text("Ideal Slides").tag("ideal")
-                            Text("Not Ideal Slides").tag("unideal")
-                        }
-                        .pickerStyle(.inline)
-                    }label:{
-                        Image(systemName: "line.3.horizontal.decrease").font(.largeTitle)
-                    }.buttonStyle(PlainButtonStyle())
-                }
-                Text("List detail attempt of speaking rate data per slide")
-                AudioPlayerView().padding(.vertical,24)
-                SlideRowView(prev: prev)
+                VStack(alignment:.leading){
+                    HStack{
+                        Text("Practice 1 Speaking Rate").font(.largeTitle).bold()
+                        Spacer()
+                        Menu{
+                            Picker("Slides Filter", selection: $selectedFilter) {
+                                Text("All").tag("all")
+                                Text("Ideal").tag("ideal")
+                                Text("Not Ideal").tag("unideal")
+                            }
+                            .pickerStyle(.inline)
+                        }label:{
+                            Image(systemName: "line.3.horizontal.decrease").font(.largeTitle)
+                        }.buttonStyle(PlainButtonStyle())
+                    }
+                    Text("List detail attempt of speaking rate data per slide")
+                    Divider().padding()
+                    SlideRowView(prev: prev)
+                    AudioPlayerView().padding(.vertical,24)
+                    
+                }.padding(.leading, 8)
             }.padding(24)
                 
         }
@@ -58,7 +59,6 @@ struct RecapDetailView: View {
     
     private func backRecap(){
         router.pop()
-        router.push(.recap(prev))
     }
 }
 
