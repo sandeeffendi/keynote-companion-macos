@@ -24,7 +24,7 @@ platform :mac do
     build_app(
       scheme: "KeynoteCompanionMacos",
       configuration: "Release",
-      export_method: "app-store",
+      export_method: "app-store-connect",
       destination: "generic/platform=macOS",
       export_options: {
         signingStyle: "manual",
