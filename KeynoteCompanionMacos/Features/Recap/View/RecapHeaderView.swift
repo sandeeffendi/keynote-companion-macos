@@ -31,7 +31,9 @@ struct RecapHeaderView: View {
                     }
                     
                     Button {
-                        // rename
+                        RenameAlert.show(currentTitle: "Practice Recording 1") { newTitle in
+                            print("Renamed to: \(newTitle)")
+                        }
                     } label: {
                         Label("Rename", systemImage: "pencil")
                     }
@@ -43,7 +45,6 @@ struct RecapHeaderView: View {
                 }
                 .clipShape(Circle())
                 .buttonStyle(.plain)
-                //.background(Circle().fill(.white.opacity(0.15)))
                 
             }.frame(maxWidth: .infinity).padding(.bottom)
         }
