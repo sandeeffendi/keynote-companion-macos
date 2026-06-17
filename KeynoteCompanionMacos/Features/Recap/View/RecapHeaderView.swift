@@ -24,12 +24,6 @@ struct RecapHeaderView: View {
                 }.clipShape(Circle())
                 Spacer()
                 Menu {
-                    Button(role: .destructive) {
-                        // delete
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    
                     Button {
                         RenameAlert.show(currentTitle: "Practice Recording 1") { newTitle in
                             print("Renamed to: \(newTitle)")
@@ -37,6 +31,14 @@ struct RecapHeaderView: View {
                     } label: {
                         Label("Rename", systemImage: "pencil")
                     }
+                    Button(role: .destructive) {
+                        DeleteConfirmAlert.show(sessionTitle: "Practice Recording 1") {
+                            print("Deleted")
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.title)
