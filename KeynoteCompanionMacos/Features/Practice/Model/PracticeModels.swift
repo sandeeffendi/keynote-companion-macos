@@ -8,7 +8,7 @@ import Foundation
 /// A contiguous span during which one slide was on screen, in media seconds.
 /// Intervals tile the whole session: [0,t1) [t1,t2) … [tn,duration].
 /// A slide visited more than once produces multiple intervals with the same
-/// `slideNumber`; recap merges them per slide number.
+/// `slideNumber`; each interval becomes a separate attempt in the recap.
 struct PracticeSlideInterval: Sendable {
     let slideNumber: Int
     let start: TimeInterval
@@ -39,7 +39,7 @@ struct PracticeResult: Sendable {
         let seconds = Int(duration) % 60
         let durationStr = String(format: "%02d:%02d", minutes, seconds)
 
-        let perSlide = mergedPerSlide()
+        let perSlide = perSlideWithAttempts()
 
         let overallWPM: Int = {
             guard duration > 0 else { return 0 }
@@ -69,14 +69,25 @@ struct PracticeResult: Sendable {
         )
 
         return RecapModel(
-            sesTitle: "Practice Recording",
+            sesTitle: derivedSessionTitle(),
             sesKeynote: keynoteFileName,
             date: dateStr,
             time: timeStr,
             duration: durationStr,
             feedback: [feedback],
-            audioFileURL: audioFileURL?.absoluteString
+            audioFileURL: audioFileURL?.absoluteString,
+            createdAt: now
         )
+    }
+
+    /// Derives a display title from the Keynote filename, stripping the extension
+    /// and truncating to 30 characters so long filenames don't overflow the UI.
+    private func derivedSessionTitle() -> String {
+        guard !keynoteFileName.isEmpty else { return "Practice Recording" }
+        let parts = keynoteFileName.components(separatedBy: ".")
+        let nameWithoutExt = parts.count > 1 ? parts.dropLast().joined(separator: ".") : keynoteFileName
+        let display = nameWithoutExt.isEmpty ? keynoteFileName : nameWithoutExt
+        return display.count > 30 ? String(display.prefix(30)) + "…" : display
     }
 
     /// Per-slide WPM, merging revisited slides within this session: words and
@@ -116,6 +127,59 @@ struct PracticeResult: Sendable {
                 ? Int((Double(total.words) / total.duration) * 60)
                 : 0
             return Slide(no: slideNumber, value: wpm, timestamp: total.firstStart)
+        }
+    }
+
+    /// Per-slide WPM with per-attempt breakdown: each interval for a given slide
+    /// becomes a separate `SlideAttempt`. The `Slide.value` is the merged WPM
+    /// (Σwords / Σdurations × 60) for display in summary cards. Ordered by first
+    /// appearance, matching `mergedPerSlide()`.
+    private func perSlideWithAttempts() -> [Slide] {
+        var order: [Int] = []
+        var groups: [Int: [(interval: PracticeSlideInterval, originalIndex: Int)]] = [:]
+
+        for (idx, interval) in slideIntervals.enumerated() {
+            if groups[interval.slideNumber] == nil {
+                order.append(interval.slideNumber)
+                groups[interval.slideNumber] = []
+            }
+            groups[interval.slideNumber]!.append((interval, idx))
+        }
+
+        return order.compactMap { slideNumber -> Slide? in
+            guard let entries = groups[slideNumber], !entries.isEmpty else { return nil }
+
+            var attempts: [SlideAttempt] = []
+            var totalWords = 0
+            var totalDuration: TimeInterval = 0
+
+            for (attemptIdx, entry) in entries.enumerated() {
+                let interval = entry.interval
+                // Last interval overall uses inclusive upper bound (same rule as mergedPerSlide).
+                let isLastOverall = entry.originalIndex == slideIntervals.count - 1
+                let words = wordTimestamps.reduce(into: 0) { count, t in
+                    let inUpper = isLastOverall ? (t <= interval.end) : (t < interval.end)
+                    if t >= interval.start && inUpper { count += 1 }
+                }
+                let span = max(0, interval.end - interval.start)
+                let wpm = span > 0 ? Int((Double(words) / span) * 60) : 0
+
+                attempts.append(SlideAttempt(
+                    attemptNo: attemptIdx + 1,
+                    wpm: wpm,
+                    startTimestamp: interval.start
+                ))
+                totalWords += words
+                totalDuration += span
+            }
+
+            let mergedWPM = totalDuration > 0 ? Int((Double(totalWords) / totalDuration) * 60) : 0
+            return Slide(
+                no: slideNumber,
+                value: mergedWPM,
+                timestamp: entries[0].interval.start,
+                attempts: attempts
+            )
         }
     }
 }

@@ -21,16 +21,6 @@
 		D311530C2FC53E1900D2705F /* Tiempo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tiempo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/ML/Frameworks/whisper.xcframework,
-			);
-			target = D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000022FC9000000000002 /* KeynoteCompanionMacosTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -39,9 +29,6 @@
 		};
 		D311530E2FC53E1900D2705F /* KeynoteCompanionMacos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */,
-			);
 			path = KeynoteCompanionMacos;
 			sourceTree = "<group>";
 		};

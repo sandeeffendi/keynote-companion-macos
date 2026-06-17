@@ -15,8 +15,6 @@ struct RecapRouteBuilder {
             RecapView(isFromHistory: false, viewModel: RecapViewModel(recapData: recapModel))
         case .fromHistory(let recapModel):
             RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: recapModel))
-        case .home:
-            HomeView(viewModel: HomeViewModel())
         }
     }
 }

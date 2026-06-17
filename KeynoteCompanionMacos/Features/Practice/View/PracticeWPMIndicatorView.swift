@@ -32,12 +32,12 @@ struct PracticeWPMIndicatorView: View {
                 .frame(width: 88, height: 88)
 
             VStack(spacing: 2) {
-                Text(isReconnecting ? "—" : "\(wpm)")
+                Text("\(wpm)")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(AppColor.textPrimary)
 
-                Text(isReconnecting ? "reconnecting…" : "WPM")
+                Text("WPM")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(AppColor.textSecondary)
                     .lineLimit(1)

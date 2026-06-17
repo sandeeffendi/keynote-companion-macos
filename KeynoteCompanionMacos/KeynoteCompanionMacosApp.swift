@@ -22,11 +22,24 @@ struct KeynoteCompanionMacosApp: App {
 
         let schema = Schema([HistoryModel.self, HistoryFeedback.self])
         let config = ModelConfiguration(schema: schema)
-        container = (try? ModelContainer(
-            for: schema,
-            migrationPlan: HistoryMigrationPlan.self,
-            configurations: config
-        )) ?? (try! ModelContainer(for: schema, configurations: config))
+        do {
+            container = try ModelContainer(
+                for: schema,
+                migrationPlan: HistoryMigrationPlan.self,
+                configurations: config
+            )
+        } catch {
+            // Migration failed — fall back to a plain container (data loss accepted
+            // at pre-production stage) or in-memory if that also fails.
+            if let plain = try? ModelContainer(for: schema, configurations: config) {
+                container = plain
+            } else {
+                container = try! ModelContainer(
+                    for: schema,
+                    configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                )
+            }
+        }
     }
 
     var body: some Scene {

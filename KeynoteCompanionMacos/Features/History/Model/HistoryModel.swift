@@ -16,6 +16,11 @@ class HistoryModel {
     var time: String
     var duration: String
     var audioFileURL: String?
+    /// Chronological sort key; set to session end time when the session is saved.
+    var createdAt: Date
+    /// Links this record back to the RecapModel.id that created it, enabling
+    /// title edits from RecapView to persist. Nil for sessions migrated from V2.
+    var sessionID: UUID?
 
     @Relationship(deleteRule: .cascade)
     var feedbacks: [HistoryFeedback]
@@ -27,7 +32,9 @@ class HistoryModel {
         time: String,
         duration: String,
         feedbacks: [HistoryFeedback] = [],
-        audioFileURL: String? = nil
+        audioFileURL: String? = nil,
+        createdAt: Date = Date(),
+        sessionID: UUID? = nil
     ) {
         self.sesTitle = sesTitle
         self.sesKeynote = sesKeynote
@@ -36,17 +43,21 @@ class HistoryModel {
         self.duration = duration
         self.feedbacks = feedbacks
         self.audioFileURL = audioFileURL
+        self.createdAt = createdAt
+        self.sessionID = sessionID
     }
 
     func toRecapModel() -> RecapModel {
         RecapModel(
+            id: sessionID ?? UUID(),
             sesTitle: sesTitle,
             sesKeynote: sesKeynote,
             date: date,
             time: time,
             duration: duration,
             feedback: feedbacks.map { $0.toFeedback() },
-            audioFileURL: audioFileURL
+            audioFileURL: audioFileURL,
+            createdAt: createdAt
         )
     }
 }

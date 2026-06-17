@@ -11,17 +11,23 @@ import SwiftData
 struct HistoryView: View {
     @EnvironmentObject private var route: AppRouter
     @StateObject var viewModel = HistoryViewModel()
-    @Query(sort: \HistoryModel.date, order: .reverse) var sessions: [HistoryModel]
-    @State private var sessionDelete: HistoryModel? = nil
-    @State private var historyToDetail: Bool = false
+    @Query(sort: \HistoryModel.createdAt, order: .reverse) var sessions: [HistoryModel]
+    @State private var searchText: String = ""
+
+    private var filtered: [HistoryModel] {
+        guard !searchText.isEmpty else { return Array(sessions) }
+        return sessions.filter {
+            $0.sesTitle.localizedCaseInsensitiveContains(searchText) ||
+            $0.sesKeynote.localizedCaseInsensitiveContains(searchText)
+        }
+    }
 
     private var header: some View {
-        VStack{
+        VStack {
             RecapHeaderView {}
             HStack {
                 Button {
-                    route.pop()
-                    route.push(.home(.main))
+                    route.replace(with: .home(.main))
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 24))
@@ -31,15 +37,12 @@ struct HistoryView: View {
                 .clipShape(Circle())
 
                 HStack {
-                    Button {} label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 20))
-                    }
-                    .clipShape(Circle())
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.leading, 10)
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 10)
 
-                    TextField("Search", text: .constant(""))
+                    TextField("Search", text: $searchText)
                         .padding(.trailing, 10)
                         .textFieldStyle(.plain)
                 }
@@ -53,19 +56,26 @@ struct HistoryView: View {
     }
 
     private var list: some View {
-        let groups = viewModel.grouped(sessions)
+        let groups = viewModel.grouped(filtered)
         return VStack(alignment: .leading, spacing: 0) {
-            ForEach(groups, id: \.date) { group in
-                VStack(alignment: .leading) {
-                    Text(group.date)
-                        .font(.title2.bold())
-                        .padding(.bottom, 4)
+            if groups.isEmpty {
+                Text(searchText.isEmpty ? "No sessions yet." : "No results for \"\(searchText)\".")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 32)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            } else {
+                ForEach(groups, id: \.date) { group in
+                    VStack(alignment: .leading) {
+                        Text(group.date)
+                            .font(.title2.bold())
+                            .padding(.bottom, 4)
 
-                    ForEach(group.sessions) { session in
-                        SessionRow(session: session, historyToDetail: $historyToDetail)
+                        ForEach(group.sessions) { session in
+                            SessionRow(session: session)
+                        }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
     }
@@ -87,7 +97,6 @@ struct HistoryView: View {
 struct SessionRow: View {
     @EnvironmentObject private var route: AppRouter
     let session: HistoryModel
-    @Binding var historyToDetail: Bool
 
     var body: some View {
         HStack {
@@ -106,12 +115,11 @@ struct SessionRow: View {
                     Text(session.time)
                         .font(.title2)
                     Button {
-                        route.pop()
-                            route.push(.recap(.fromHistory(session.toRecapModel())))
-                        } label: {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 22))
-                        }
+                        route.replace(with: .recap(.fromHistory(session.toRecapModel())))
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 22))
+                    }
                     .cornerRadius(100)
                     .buttonStyle(.plain)
                     .padding(.leading, 10)
