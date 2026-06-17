@@ -13,13 +13,13 @@ struct RecapRouteBuilder {
     static func build(_ route: RecapRoute) -> some View {
         switch route {
             case .main:
-                RecapView(viewModel: RecapViewModel())
+            RecapView(viewModel: RecapViewModel(), prev: .main)
             case .home:
                 HomeView(viewModel: HomeViewModel())
-            case .fromHistory:
-                RecapView(viewModel: RecapViewModel())
+            case .historyDetail:
+                RecapView(viewModel: RecapViewModel(), prev: .main)
             case .detail:
-                RecapDetailView(viewModel: RecapDetailViewModel())
+            RecapDetailView(viewModel: RecapDetailViewModel(), prev: .detail)
         }
 
     }

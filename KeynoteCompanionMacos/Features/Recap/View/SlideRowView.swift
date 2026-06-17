@@ -9,12 +9,14 @@ import SwiftUI
 
 struct SlideRowView: View {
     @EnvironmentObject private var router: AppRouter
+    let prev: RecapRoute
+    
     struct Ocean: Identifiable {
         let name: String
         let id = UUID()
     }
     
-    private var oceans = [
+    var oceans = [
         Ocean(name: "Pacific"),
         Ocean(name: "Atlantic"),
         Ocean(name: "Indian")
@@ -27,8 +29,12 @@ struct SlideRowView: View {
         List(oceans){ ocean in
             VStack{
                 Button{
-                    withAnimation(.easeInOut(duration:0.2)){
-                        oceanID = oceanID == ocean.name ? nil : ocean.name
+                    
+                    if prev == .detail {
+                        
+                        withAnimation(.easeInOut(duration:0.2)){
+                            oceanID = oceanID == ocean.name ? nil : ocean.name
+                        }
                     }
                 }label:{
                     HStack {
@@ -36,14 +42,18 @@ struct SlideRowView: View {
                         Spacer()
                         Text("170 WPM").font(.body)
                             Image(systemName: "play.fill").font(.title2)
-                        Image(systemName: oceanID == ocean.name ? "chevron.down" : "chevron.right").font(.title2)
+                        if prev == .detail {
+                            Image(systemName: oceanID == ocean.name ? "chevron.down" : "chevron.right").font(.title2)
+                        }
                     }
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                 }.buttonStyle(.plain)
                 
-                if oceanID == ocean.name {
-                    AttemptRowView()
+                if prev == .detail {
+                    if oceanID == ocean.name {
+                        AttemptRowView()
+                    }
                 }
             }
         }.listStyle(.plain).scrollContentBackground(.hidden)
@@ -51,5 +61,5 @@ struct SlideRowView: View {
 }
 
 #Preview {
-    SlideRowView().frame(maxWidth: .infinity).padding()
+    SlideRowView(prev:.main).frame(maxWidth: .infinity).padding()
 }

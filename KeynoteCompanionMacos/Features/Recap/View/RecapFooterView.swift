@@ -25,12 +25,10 @@ struct RecapFooterView: View {
             Divider().padding(.vertical, 24)
             HStack{
                 Spacer()
-                Button{
+                PillButton(title: "Back Home", systemImage: "house.fill", role: .primary){
                     backHome()
-                }label:{
-                    Label("Back Home", systemImage: "house.fill").font(.title3).padding(7)
                 }
-            }
+            }.frame(alignment: .trailing)
         }
     }
     

@@ -18,7 +18,7 @@ struct HistoryRouteBuilder {
         case .home:
             HomeView(viewModel: HomeViewModel())
         case .historyDetail:
-            RecapView(viewModel: RecapViewModel())
+            RecapView(viewModel: RecapViewModel(), prev: .historyDetail)
         }
 
     }

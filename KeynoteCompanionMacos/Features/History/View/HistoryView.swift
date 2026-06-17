@@ -18,13 +18,11 @@ struct HistoryView: View {
     }
     
     var body: some View {
-        VStack{
-            HistoryWindowControl{}.padding(10)
             VStack(alignment: .leading) {
+                HistoryWindowControl{}
                 HistoryHeaderView()
                 HistoryRowView(viewModel: viewModel)
-            }.padding(.horizontal, 24)
-        }
+            }.padding(24)
     }
 }
 

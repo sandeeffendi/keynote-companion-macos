@@ -13,6 +13,6 @@ import SwiftUI
 
 final class RecapViewModel: ObservableObject {
     let audioViewModel = AudioViewModel()
-    
+    let prev: String = "◀︎"
     func showDetail(){}
 }

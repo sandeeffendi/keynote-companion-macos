@@ -13,10 +13,11 @@ import Combine
 struct RecapDetailView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: RecapDetailViewModel
+    let prev: RecapRoute
     
-    init(viewModel: RecapDetailViewModel) {
+    init(viewModel: RecapDetailViewModel, prev: RecapRoute) {
         _viewModel = StateObject(wrappedValue: viewModel)
-        
+        self.prev = prev
     }
     
     @State private var selectedFilter: String = "All"
@@ -26,10 +27,13 @@ struct RecapDetailView: View {
             RecapWindowControl{}.padding(.horizontal, 10) //minmaxclose
             VStack(alignment:.leading){
                 Button{
-                    backRecap()
+                    prev = .main {
+                        backRecap()
+                        
+                    }
                 }label:{
-                    Image(systemName: "chevron.left.circle.fill").font(.largeTitle)
-                }.buttonStyle(PlainButtonStyle()).padding(.bottom, 16)
+                    Image(systemName: "chevron.left").foregroundStyle(AppColor.textPrimary).font(.title).padding(5)
+                }.clipShape(Circle()).padding(.bottom, 16)
                 HStack{
                     Text("Practice 1 Speaking Rate").font(.largeTitle).bold()
                     Spacer()
@@ -41,12 +45,12 @@ struct RecapDetailView: View {
                         }
                         .pickerStyle(.inline)
                     }label:{
-                        Image(systemName: "line.3.horizontal.decrease.circle.fill").font(.largeTitle)
+                        Image(systemName: "line.3.horizontal.decrease").font(.largeTitle)
                     }.buttonStyle(PlainButtonStyle())
                 }
                 Text("List detail attempt of speaking rate data per slide")
                 AudioPlayerView().padding(.vertical,24)
-                SlideRowView()
+                SlideRowView(prev: prev)
             }.padding(24)
                 
         }
@@ -54,11 +58,11 @@ struct RecapDetailView: View {
     
     private func backRecap(){
         router.pop()
-        router.push(.recap(.main))
+        router.push(.recap(prev))
     }
 }
 
 #Preview {
-    RecapDetailView(viewModel: RecapDetailViewModel())
+    RecapDetailView(viewModel: RecapDetailViewModel(), prev: .detail)
         .environmentObject(AppRouter())
 }
