@@ -20,6 +20,7 @@ enum HomeViewState: CaseIterable {
 enum HomeStatusAction {
     case openPermissions
     case openKeynoteFile
+    case startSlideshow
     case recordPractice
 }
 
@@ -46,7 +47,7 @@ extension HomeViewState {
             return
                 "Click 'Open Keynote File' to open a keynote file that you want to present."
         case .noKeynoteSlideshowActive:
-            return "Start to slideshow a keynote."
+            return "Click 'Run Slideshow' to start your Keynote slideshow."
         case .keynoteSlideshowActive:
             return "Click 'Record Practice' to start practicing."
         }
@@ -72,7 +73,7 @@ extension HomeViewState {
         case .noKeynoteFileOpen:
             return .openKeynoteFile
         case .noKeynoteSlideshowActive:
-            return nil
+            return .startSlideshow
         case .keynoteSlideshowActive:
             return .recordPractice
         }
@@ -84,6 +85,8 @@ extension HomeViewState {
             return "Open Permissions"
         case .openKeynoteFile:
             return "Open Keynote File"
+        case .startSlideshow:
+            return "Run Slideshow"
         case .recordPractice:
             return "Record Practice"
         case .none:

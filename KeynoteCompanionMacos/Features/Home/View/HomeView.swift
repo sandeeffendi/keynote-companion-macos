@@ -103,6 +103,8 @@ struct HomeView: View {
             viewModel.openPermissions()
         case .openKeynoteFile:
             viewModel.openKeynoteFile()
+        case .startSlideshow:
+            viewModel.startSlideshow()
         case .recordPractice:
             startRecording()
         }
