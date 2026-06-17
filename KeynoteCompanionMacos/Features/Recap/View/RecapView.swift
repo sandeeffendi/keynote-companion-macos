@@ -16,11 +16,10 @@ struct RecapView: View {
     @StateObject private var viewModel: RecapViewModel
     @Environment(\.modelContext) private var modelContext
 
-    @State private var isMuted: Bool = false
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
-    @State private var selectedFilter: SlideWPMFilter = .all
-    @State private var expandedSlides: Set<Int> = []
+    @State private var isHoveringTitle: Bool = false
+    @State private var selectedFilter: SlideWPMFilter = .ascending
 
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
         self.isFromHistory = isFromHistory
@@ -29,17 +28,21 @@ struct RecapView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            RecapHeaderView {}
+            // Header shares the same horizontal inset as the content below so the
+            // custom traffic-light controls align with the 24pt margin (matching
+            // Home/Settings/History) instead of sitting flush against the window edge.
+            RecapHeaderView()
+                .padding(.horizontal, AppSpacing.xl)
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    header.padding(.bottom, 20)
-                    Divider().padding(.bottom, 24)
-                    slidesHighlightsSection.padding(.bottom, 24)
-                    replaySection.padding(.bottom, 24)
-                    slideDetailsSection.padding(.bottom, 24)
+                VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                    header
+                    highlightSection
+                    replaySection
                 }
-                .padding(24)
+                .padding(.horizontal, AppSpacing.xl)
+                .padding(.top, AppSpacing.lg)
+                .padding(.bottom, AppSpacing.xl)
             }
 
             if !isFromHistory { footer }
@@ -54,86 +57,186 @@ struct RecapView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
             if isFromHistory {
-                Button {
+                IconCircleButton(systemName: "chevron.left") {
                     route.replace(with: .history(.main))
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24))
-                        .frame(width: 36, height: 36)
                 }
-                .buttonStyle(.glass)
-                .clipShape(Circle())
-                .padding(.bottom, 12)
+                .padding(.bottom, AppSpacing.md)
             }
 
-            if isEditingTitle {
-                TextField("Session title", text: $editingTitleText)
-                    .font(.largeTitle.bold())
-                    .textFieldStyle(.plain)
-                    .onSubmit { commitTitleEdit() }
-            } else {
-                HStack(spacing: 6) {
-                    Text(viewModel.recapData.sesTitle)
-                        .font(.largeTitle.bold())
-                    Image(systemName: "pencil")
-                        .font(.callout)
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    editingTitleText = viewModel.recapData.sesTitle
-                    isEditingTitle = true
-                }
-            }
+            titleView
 
             Text(viewModel.recapData.sesKeynote)
-                .font(.title3)
-                .padding(.top, 8)
+                .font(AppFont.recapSubtitle)
+                .foregroundStyle(AppColor.textPrimary)
+                .padding(.top, AppSpacing.sm)
 
-            HStack(spacing: 8) {
-                Label(viewModel.recapData.date, systemImage: "calendar")
-                Divider().frame(height: 14)
-                Label(viewModel.recapData.time, systemImage: "clock")
-                Divider().frame(height: 14)
-                Label(viewModel.recapData.duration, systemImage: "stopwatch")
-            }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding(.top, 16)
+            metadataRow
+                .padding(.top, AppSpacing.md)
         }
     }
 
-    // MARK: - Slides Highlights
+    @ViewBuilder
+    private var titleView: some View {
+        if isEditingTitle {
+            TextField("Session title", text: $editingTitleText)
+                .font(AppFont.recapTitle)
+                .textFieldStyle(.plain)
+                .onSubmit { commitTitleEdit() }
+        } else {
+            HStack(spacing: AppSpacing.sm) {
+                Text(viewModel.recapData.sesTitle)
+                    .font(AppFont.recapTitle)
+                Image(systemName: "pencil")
+                    .font(.callout)
+                    .foregroundStyle(AppColor.textTertiary)
+                    .opacity(isHoveringTitle ? 1 : 0)
+            }
+            .contentShape(Rectangle())
+            .onHover { isHoveringTitle = $0 }
+            .onTapGesture {
+                editingTitleText = viewModel.recapData.sesTitle
+                isEditingTitle = true
+            }
+        }
+    }
 
-    private var slidesHighlightsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Slides Highlights")
-                .font(.title2.bold())
+    private var metadataRow: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Text(viewModel.recapData.date)
+            Divider().frame(height: AppSize.footerSeparatorHeight)
+            Text(viewModel.recapData.time)
+            Divider().frame(height: AppSize.footerSeparatorHeight)
+            Text(viewModel.recapData.duration)
+        }
+        .font(AppFont.recapMeta)
+        .foregroundStyle(AppColor.textSecondary)
+    }
 
-            HStack(alignment: .top, spacing: 12) {
-                ForEach(viewModel.recapData.feedback, id: \.category) { feedback in
-                    RecapCardView(feedback: feedback)
-                        .frame(maxWidth: .infinity)
+    // MARK: - Highlight
+
+    private var highlightSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Text("Highlight")
+                    .font(AppFont.recapSectionTitle)
+                Spacer()
+                filterMenu
+            }
+            highlightCard
+        }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            ForEach(SlideWPMFilter.allCases) { filter in
+                Button {
+                    selectedFilter = filter
+                } label: {
+                    if selectedFilter == filter {
+                        Label(filter.rawValue, systemImage: "checkmark")
+                    } else {
+                        Text(filter.rawValue)
+                    }
                 }
             }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(AppFont.smallIcon)
+                .foregroundStyle(AppColor.iconSecondary)
+                .frame(
+                    width: AppSize.headerIconButtonSize,
+                    height: AppSize.headerIconButtonSize
+                )
+                .contentShape(Circle())
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Circle())
+        .fixedSize()
+    }
+
+    private var highlightCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text("This is your speaking rate")
+                    .font(AppFont.recapCardTitle)
+                Text("Tips: keep your speaking rate between \(RecapViewModel.wpmLowerBand) to \(RecapViewModel.wpmUpperBand) WPM (Words per Minute).")
+                    .font(AppFont.recapCardTip)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+            .padding(AppSpacing.lg)
+
+            slideList
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    @ViewBuilder
+    private var slideList: some View {
+        let slides = viewModel.wpmSlides(for: selectedFilter)
+        if slides.isEmpty {
+            Text("No slides in this range.")
+                .font(AppFont.recapRow)
+                .foregroundStyle(AppColor.textSecondary)
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.bottom, AppSpacing.lg)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(slides.enumerated()), id: \.element.no) { idx, slide in
+                    slideRow(slide)
+                    if idx < slides.count - 1 {
+                        Divider().padding(.horizontal, AppSpacing.lg)
+                    }
+                }
+            }
+            .padding(.bottom, AppSpacing.sm)
         }
     }
 
-    // MARK: - Replay your session
+    private func slideRow(_ slide: Slide) -> some View {
+        HStack(spacing: AppSpacing.md) {
+            Text("Slide \(slide.no)")
+                .font(AppFont.recapRow)
+            Spacer()
+            if let label = viewModel.status(for: slide.value).label {
+                Text(label)
+                    .font(AppFont.recapRowStatus)
+                    .foregroundStyle(AppColor.textPrimary)
+            }
+            Text("\(slide.value) WPM")
+                .font(AppFont.recapRowValue)
+                .foregroundStyle(AppColor.textSecondary)
+            Button {
+                viewModel.playSlideSegment(slide)
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.caption)
+                    .foregroundStyle(AppColor.iconSecondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!viewModel.hasAudio)
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.md)
+    }
+
+    // MARK: - Session player
 
     private var replaySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Replay your session")
-                .font(.title2.bold())
-
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("Listen to your entire practice session:")
+                .font(AppFont.recapCardTitle)
+                .foregroundStyle(AppColor.textSecondary)
             audioPlayer
         }
     }
 
     private var audioPlayer: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppSpacing.md) {
             Button {
                 viewModel.skipToPreviousSlide()
             } label: {
@@ -159,192 +262,81 @@ struct RecapView: View {
             .buttonStyle(.plain)
             .disabled(!viewModel.hasAudio)
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 4)
-                    Capsule()
-                        .fill(viewModel.hasAudio ? Color.primary : Color.secondary.opacity(0.4))
-                        .frame(width: geo.size.width * viewModel.playbackProgress, height: 4)
-                    Circle()
-                        .fill(viewModel.hasAudio ? Color.primary : Color.secondary.opacity(0.4))
-                        .frame(width: 12, height: 12)
-                        .offset(x: geo.size.width * viewModel.playbackProgress - 6)
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    let p = min(max(value.location.x / geo.size.width, 0), 1)
-                                    viewModel.seekByProgress(p)
-                                }
-                        )
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-            }
-            .frame(height: 20)
+            scrubber
 
             Button {
-                isMuted.toggle()
-                viewModel.audioPlayer?.volume = isMuted ? 0 : 1
+                viewModel.setMuted(!viewModel.isMuted)
             } label: {
-                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                    .foregroundStyle(.secondary)
+                Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .foregroundStyle(AppColor.iconSecondary)
             }
             .buttonStyle(.plain)
             .disabled(!viewModel.hasAudio)
 
-            HStack(spacing: 4) {
+            HStack(spacing: AppSpacing.xs) {
                 Text("\(viewModel.formattedCurrentTime) / \(viewModel.formattedTotalDuration)")
-                    .font(.system(size: 11).monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .font(AppFont.recapPlayerTime)
+                    .foregroundStyle(AppColor.textSecondary)
 
-                Divider().frame(height: 12)
+                Divider().frame(height: AppSize.footerSeparatorHeight - 4)
 
                 Text("Slide \(viewModel.currentSlideNumber)")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .font(AppFont.recapPlayerTime.weight(.semibold))
+                    .foregroundStyle(AppColor.textSecondary)
             }
             .opacity(viewModel.hasAudio ? 1 : 0.4)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.secondary.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.md)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: AppRadius.card))
         .task { viewModel.configureAudioPlayer() }
     }
 
-    // MARK: - Slide Details
-
-    private var slideDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Slide Details").font(.title2.bold())
-            filterChips
-            slideList
-        }
-    }
-
-    private var filterChips: some View {
-        HStack(spacing: 8) {
-            ForEach(SlideWPMFilter.allCases, id: \.self) { filter in
-                filterChip(filter)
+    private var scrubber: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(AppColor.separator)
+                    .frame(height: 4)
+                Capsule()
+                    .fill(viewModel.hasAudio ? AppColor.textPrimary : AppColor.separator)
+                    .frame(width: geo.size.width * viewModel.playbackProgress, height: 4)
+                Circle()
+                    .fill(viewModel.hasAudio ? AppColor.textPrimary : AppColor.separator)
+                    .frame(width: 12, height: 12)
+                    .offset(x: geo.size.width * viewModel.playbackProgress - 6)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                let p = min(max(value.location.x / geo.size.width, 0), 1)
+                                viewModel.seekByProgress(p)
+                            }
+                    )
             }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
-    }
-
-    @ViewBuilder
-    private func filterChip(_ filter: SlideWPMFilter) -> some View {
-        if selectedFilter == filter {
-            Button(filter.rawValue) { selectedFilter = filter; expandedSlides.removeAll() }
-                .buttonStyle(.glassProminent)
-                .tint(AppColor.controlAccent)
-                .font(.subheadline)
-        } else {
-            Button(filter.rawValue) { selectedFilter = filter; expandedSlides.removeAll() }
-                .buttonStyle(.glass)
-                .font(.subheadline)
-        }
-    }
-
-    @ViewBuilder
-    private var slideList: some View {
-        let slides = viewModel.wpmSlides(for: selectedFilter)
-        if slides.isEmpty {
-            Text("No slides in this range.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-        } else {
-            VStack(spacing: 0) {
-                ForEach(Array(slides.enumerated()), id: \.element.no) { idx, slide in
-                    slideRowHeader(slide)
-                    slideRowAttempts(slide)
-                    if idx < slides.count - 1 {
-                        Divider().padding(.leading, 34)
-                    }
-                }
-            }
-            .background(Color.secondary.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-
-    private func slideRowHeader(_ slide: Slide) -> some View {
-        let isExpanded = expandedSlides.contains(slide.no)
-        let hasAttempts = slide.attempts.count > 1
-        return HStack(spacing: 10) {
-            Circle()
-                .fill(wpmColor(slide.value))
-                .frame(width: 8, height: 8)
-            Text("Slide \(slide.no)").font(.body.bold())
-            Spacer()
-            Text("\(slide.value) WPM").font(.subheadline).foregroundStyle(.secondary)
-            Button { viewModel.seek(to: slide.timestamp) } label: {
-                Image(systemName: "play.fill").font(.caption).foregroundStyle(.secondary)
-            }.buttonStyle(.plain)
-            Image(systemName: "chevron.right")
-                .font(.caption).foregroundStyle(.tertiary)
-                .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                .animation(.easeInOut(duration: 0.2), value: isExpanded)
-                .opacity(hasAttempts ? 1 : 0)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard hasAttempts else { return }
-            if isExpanded { expandedSlides.remove(slide.no) }
-            else { expandedSlides.insert(slide.no) }
-        }
-    }
-
-    @ViewBuilder
-    private func slideRowAttempts(_ slide: Slide) -> some View {
-        if expandedSlides.contains(slide.no) {
-            ForEach(slide.attempts, id: \.attemptNo) { attempt in
-                HStack(spacing: 10) {
-                    Circle()
-                        .fill(wpmColor(attempt.wpm))
-                        .frame(width: 6, height: 6)
-                        .padding(.leading, 22)
-                    Text("Attempt \(attempt.attemptNo)").font(.subheadline).foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(attempt.wpm) WPM").font(.subheadline).foregroundStyle(.secondary)
-                    Button { viewModel.seek(to: attempt.startTimestamp) } label: {
-                        Image(systemName: "play.fill").font(.caption2).foregroundStyle(.secondary)
-                    }.buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(Color.secondary.opacity(0.04))
-            }
-        }
+        .frame(height: 20)
     }
 
     // MARK: - Footer
 
     private var footer: some View {
-        GlassEffectContainer {
-            HStack {
-                Spacer()
-                Button {
-                    route.popToRoot()
-                } label: {
-                    Label("Back to Home", systemImage: "house.fill")
-                        .font(.system(size: 17))
-                        .frame(height: 48)
-                        .padding(.horizontal, 16)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(AppColor.controlAccent)
+        HStack {
+            Spacer()
+            PillButton(
+                title: "Back to Home",
+                systemImage: "house.fill",
+                role: .primary
+            ) {
+                route.popToRoot()
             }
         }
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.top, AppSpacing.md)
+        .padding(.bottom, AppSpacing.xl)
     }
 
     // MARK: - Helpers
-
-    private func wpmColor(_ wpm: Int) -> Color {
-        if wpm < 90 { return AppColor.wpmSlow }
-        if wpm > 120 { return AppColor.wpmFast }
-        return AppColor.wpmGood
-    }
 
     private func commitTitleEdit() {
         let trimmed = editingTitleText.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -10,15 +10,40 @@ import Combine
 import Foundation
 import SwiftData
 
-enum SlideWPMFilter: String, CaseIterable {
-    case all      = "All"
-    case tooSlow  = "Too Slow"   // < 90 WPM
-    case ideal    = "Ideal"      // 90–120 WPM
-    case tooFast  = "Too Fast"   // > 120 WPM
+/// Mutually-exclusive ordering/filter applied to the per-slide WPM list, chosen
+/// from the "Highlight" section's filter menu. Ascending/Descending sort by slide
+/// number; Ideal/Not ideal filter on the speaking-rate band (kept in slide order).
+enum SlideWPMFilter: String, CaseIterable, Identifiable {
+    case ascending  = "Ascending"
+    case descending = "Descending"
+    case ideal      = "Ideal"
+    case notIdeal   = "Not ideal"
+
+    var id: String { rawValue }
+}
+
+/// Speaking-rate classification for a slide, surfaced as a text label in Recap.
+enum WPMRateStatus {
+    case tooSlow
+    case ideal
+    case tooFast
+
+    /// Bold row label shown for out-of-range slides; `nil` for ideal.
+    var label: String? {
+        switch self {
+        case .tooSlow: return "Speak too slow!"
+        case .tooFast: return "Speak too fast!"
+        case .ideal:   return nil
+        }
+    }
 }
 
 @MainActor
 final class RecapViewModel: ObservableObject {
+    /// Ideal speaking-rate band (WPM), inclusive. Matches the live Practice band.
+    static let wpmLowerBand = 90
+    static let wpmUpperBand = 120
+
     @Published var recapData: RecapModel
 
     // Audio playback
@@ -26,11 +51,15 @@ final class RecapViewModel: ObservableObject {
     @Published var playbackProgress: Double = 0.0
     @Published private(set) var totalDuration: TimeInterval = 0
     @Published private(set) var hasAudio: Bool = false
+    @Published private(set) var isMuted: Bool = false
 
     private(set) var hasSaved = false
     private(set) var audioPlayer: AVAudioPlayer?
     private var playerDelegate: AudioPlayerEndDelegate?
     private var progressTimerTask: Task<Void, Never>?
+    /// When set, playback stops automatically once `currentTime` reaches it
+    /// (per-slide isolated playback). Cleared by any full-session action.
+    private var segmentEnd: TimeInterval?
 
     init(
         recapData: RecapModel = RecapModel(
@@ -136,6 +165,8 @@ final class RecapViewModel: ObservableObject {
 
     func togglePlayback() {
         guard let player = audioPlayer else { return }
+        // Toggling the main transport always plays the full session, not a segment.
+        segmentEnd = nil
         if isPlaying {
             player.pause()
             stopProgressTimer()
@@ -148,15 +179,43 @@ final class RecapViewModel: ObservableObject {
 
     func seek(to timestamp: TimeInterval) {
         guard let player = audioPlayer, totalDuration > 0 else { return }
+        segmentEnd = nil
         player.currentTime = timestamp
         playbackProgress = timestamp / totalDuration
     }
 
     func seekByProgress(_ progress: Double) {
         guard let player = audioPlayer, totalDuration > 0 else { return }
+        segmentEnd = nil
         let time = progress * totalDuration
         player.currentTime = time
         playbackProgress = progress
+    }
+
+    func setMuted(_ muted: Bool) {
+        isMuted = muted
+        audioPlayer?.volume = muted ? 0 : 1
+    }
+
+    // MARK: - Per-slide isolated playback
+
+    /// Inclusive start / exclusive end of slide `slide`'s audio segment. Delegates to
+    /// `RecapSlideAnalysis.segmentBounds` (pure — that helper carries the unit tests).
+    func segmentBounds(for slide: Slide) -> (start: TimeInterval, end: TimeInterval) {
+        let slides = recapData.feedback.first(where: { $0.category == "WPM" })?.perSlide ?? []
+        return RecapSlideAnalysis.segmentBounds(for: slide, in: slides, totalDuration: totalDuration)
+    }
+
+    /// Play only `slide`'s segment, stopping automatically at its end boundary.
+    func playSlideSegment(_ slide: Slide) {
+        guard let player = audioPlayer, totalDuration > 0 else { return }
+        let bounds = segmentBounds(for: slide)
+        segmentEnd = bounds.end
+        player.currentTime = bounds.start
+        playbackProgress = bounds.start / totalDuration
+        player.play()
+        isPlaying = player.isPlaying
+        startProgressTimer()
     }
 
     func autoSave(context: ModelContext) {
@@ -251,26 +310,36 @@ final class RecapViewModel: ObservableObject {
 
     func wpmSlides(for filter: SlideWPMFilter) -> [Slide] {
         guard let wpm = recapData.feedback.first(where: { $0.category == "WPM" }) else { return [] }
-        switch filter {
-        case .all:     return wpm.perSlide
-        case .tooSlow: return wpm.perSlide.filter { $0.value < 90 }
-        case .ideal:   return wpm.perSlide.filter { $0.value >= 90 && $0.value <= 120 }
-        case .tooFast: return wpm.perSlide.filter { $0.value > 120 }
-        }
+        return RecapSlideAnalysis.filteredSlides(
+            wpm.perSlide,
+            filter: filter,
+            lowerBand: Self.wpmLowerBand,
+            upperBand: Self.wpmUpperBand
+        )
+    }
+
+    /// Classify a WPM value against the ideal band.
+    func status(for wpm: Int) -> WPMRateStatus {
+        RecapSlideAnalysis.status(for: wpm, lowerBand: Self.wpmLowerBand, upperBand: Self.wpmUpperBand)
     }
 
     // MARK: - Private
 
     private func startProgressTimer() {
+        stopProgressTimer()
         progressTimerTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(200))
                 guard let self, let player = self.audioPlayer else { break }
-                if player.isPlaying {
-                    self.playbackProgress = player.currentTime / player.duration
-                } else {
+                guard player.isPlaying else { break }
+                // Per-slide isolated playback: stop at the segment boundary.
+                if let end = self.segmentEnd, player.currentTime >= end {
+                    player.pause()
+                    self.isPlaying = false
+                    self.segmentEnd = nil
                     break
                 }
+                self.playbackProgress = player.currentTime / player.duration
             }
         }
     }

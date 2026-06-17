@@ -8,10 +8,7 @@
 import SwiftUI
 
 struct RecapHeaderView: View {
-    let onHeaderActionTapped: () -> Void
-
     var body: some View {
-        WindowHeaderView(title: "Tiempo") {        }
+        WindowHeaderView(title: "Tiempo")
     }
 }
-

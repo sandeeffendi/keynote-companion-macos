@@ -25,12 +25,14 @@ enum AppColor {
     static let controlTextPrimary = Color.primary
     static let controlTextDisabled = Color(nsColor: .disabledControlTextColor)
 
-    // Monochrome tint for prominent (primary) controls — dark fill in light mode,
-    // light fill in dark mode. Native `.buttonStyle(.glassProminent)` derives the
-    // contrasting label automatically; for the manually-tinted glass used by `PillButton`
-    // (which preserves exact pill metrics) pair it with `onControlAccent` for the label.
-    static let controlAccent = Color(light: .black, dark: .white)
-    static let onControlAccent = Color(light: .white, dark: .black)
+    // Blue accent for prominent (primary) controls — identical in light & dark so the
+    // CTA reads as a brand-blue pill against the clear glass window surface. Native
+    // `.buttonStyle(.glassProminent)` derives the contrasting label automatically; for
+    // the manually-tinted glass used by `PillButton` (which preserves exact pill metrics)
+    // pair it with `onControlAccent` for the label. `onControlAccent` is white in both
+    // appearances because the label always sits on blue glass.
+    static let controlAccent = Color(nsColor: .systemBlue)
+    static let onControlAccent = Color(light: .white, dark: .white)
 
     // Subtle highlight rim on glass surfaces — a light hairline in both modes,
     // softened in dark so it doesn't glare.

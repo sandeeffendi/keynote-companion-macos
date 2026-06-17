@@ -24,7 +24,7 @@ struct HistoryView: View {
 
     private var header: some View {
         VStack {
-            RecapHeaderView {}
+            RecapHeaderView()
             HStack {
                 Button {
                     route.replace(with: .home(.main))
