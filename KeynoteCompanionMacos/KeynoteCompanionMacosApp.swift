@@ -20,13 +20,16 @@ struct KeynoteCompanionMacosApp: App {
 #endif
         try? Tips.configure()
 
-        let schema = Schema([HistoryModel.self, HistoryFeedback.self])
-        let config = ModelConfiguration(schema: schema)
-        container = (try? ModelContainer(
-            for: schema,
-            migrationPlan: HistoryMigrationPlan.self,
-            configurations: config
-        )) ?? (try! ModelContainer(for: schema, configurations: config))
+//        let schema = Schema([HistoryModel.self, HistoryFeedback.self])
+//        let config = ModelConfiguration(schema: schema)
+//        container = (try? ModelContainer(
+//            for: schema,
+//            migrationPlan: HistoryMigrationPlan.self,
+//            configurations: config
+//        )) ?? (try! ModelContainer(for: schema, configurations: config))
+        let schema = Schema([HistoryModel.self, Feedback.self])
+        let config = ModelConfiguration("TiempoDB", schema: schema)
+        container = try! ModelContainer(for: schema, configurations: config)
     }
 
     var body: some Scene {
