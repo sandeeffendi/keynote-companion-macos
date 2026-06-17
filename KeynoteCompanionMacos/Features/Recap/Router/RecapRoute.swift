@@ -8,7 +8,8 @@
 import Foundation
 
 enum RecapRoute: Hashable {
-    case main(RecapModel)
-    case fromHistory(RecapModel)
+    case main
+    case historyDetail
     case home
+    case detail
 }

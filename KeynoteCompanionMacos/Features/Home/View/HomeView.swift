@@ -47,7 +47,7 @@ struct HomeView: View {
             .onAppear {
                 practiceViewModel.onSessionFinished = { [weak router] result in
                     let recapModel = result.toRecapModel()
-                    router?.push(.recap(.main(recapModel)))
+                    router?.push(.recap(.main))
                 }
                 applyWindowFloating(for: viewModel.state)
             }
@@ -75,7 +75,6 @@ struct HomeView: View {
             )
 
             Spacer(minLength: 0)
-
             HomeFooterView(onActivitiesTapped: showActivities)
         }
         .padding(.horizontal, AppSpacing.xl)
