@@ -19,18 +19,35 @@ final class PracticeViewModel: ObservableObject {
     /// a "reconnecting" state instead of a misleading 0 WPM.
     @Published private(set) var isReconnecting: Bool = false
 
+    var wpmFeedbackText: String {
+        if isReconnecting { return "Listening..." }
+        switch wpmStatus {
+        case .tooSlow: return "You speak too slow"
+        case .good:    return "Your pace is great!"
+        case .tooFast: return "You speak too fast"
+        }
+    }
+
     private let coordinator: PracticeRecordingCoordinator
+    private let slideshowStopper: KeynoteSlideshowStopping?
     private var observationTask: Task<Void, Never>?
     private var timerTask: Task<Void, Never>?
 
     var onSessionFinished: ((PracticeResult) -> Void)?
 
     convenience init() {
-        self.init(coordinator: PracticeRecordingCoordinator())
+        self.init(
+            coordinator: PracticeRecordingCoordinator(),
+            slideshowStopper: KeynoteSlideshowStopService()
+        )
     }
 
-    init(coordinator: PracticeRecordingCoordinator) {
+    init(
+        coordinator: PracticeRecordingCoordinator,
+        slideshowStopper: KeynoteSlideshowStopping? = nil
+    ) {
         self.coordinator = coordinator
+        self.slideshowStopper = slideshowStopper
     }
 
     deinit {
@@ -68,14 +85,20 @@ final class PracticeViewModel: ObservableObject {
         }
     }
 
+    func retake() {
+        Task { await coordinator.retakeCurrentSlide() }
+    }
+
     func stop() {
         timerTask?.cancel()
         observationTask?.cancel()
+        let stopper = slideshowStopper
         Task {
             let result = await coordinator.stop()
             isRecording = false
             isPaused = false
             onSessionFinished?(result)
+            await stopper?.stopSlideshow()
         }
     }
 

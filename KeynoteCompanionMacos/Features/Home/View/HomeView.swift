@@ -20,10 +20,15 @@ struct HomeView: View {
             .background(
                 SlideshowOverlayWindowPresenter(
                     isActive: shouldShowSlideshowOverlay,
-                    size: CGSize(
-                        width: AppSize.homeWindowWidth,
-                        height: AppSize.homeWindowHeight
-                    )
+                    size: practiceViewModel.isRecording
+                        ? CGSize(
+                            width: AppSize.practiceOverlayWidth,
+                            height: AppSize.practiceOverlayHeight
+                        )
+                        : CGSize(
+                            width: AppSize.homeWindowWidth,
+                            height: AppSize.homeWindowHeight
+                        )
                 ) {
                     if practiceViewModel.isRecording {
                         PracticeOverlayView(viewModel: practiceViewModel)

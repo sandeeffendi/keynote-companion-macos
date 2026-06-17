@@ -44,6 +44,11 @@ enum AppSize {
 
     static let recapWindowWidth: CGFloat = 560
     static let recapWindowHeight: CGFloat = 732
+
+    static let practiceOverlayWidth: CGFloat = 172
+    static let practiceOverlayHeight: CGFloat = 205
+    static let practiceOverlayPulseSize: CGFloat = 60
+    static let practiceOverlayButtonSize: CGFloat = 36
 }
 
 // App radius token
