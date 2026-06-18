@@ -11,15 +11,9 @@ import SwiftUI
 struct HistoryRouteBuilder {
     @ViewBuilder
     static func build(_ route: HistoryRoute) -> some View {
-
         switch route {
         case .main:
             HistoryView(viewModel: HistoryViewModel())
-        case .home:
-            HomeView(viewModel: HomeViewModel())
-        case .historyDetail:
-            RecapView(viewModel: RecapViewModel(), prev: .historyDetail)
         }
-
     }
 }

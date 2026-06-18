@@ -10,47 +10,121 @@ import SwiftData
 
 @Model
 class HistoryModel {
-    var title: String
-    var keynote: String
-    var date: String
-    var time: String
-    var duration: String
-    
+    var sesTitle: String
+    var sesKeynote: String
+    /// Session length in seconds. Display date/time/duration are derived from
+    /// `createdAt` + this value via `SessionFormatting` — never stored as strings.
+    var durationSeconds: TimeInterval
+    var audioFileURL: String?
+    /// Chronological sort key; set to session end time when the session is saved.
+    var createdAt: Date
+    /// Links this record back to the RecapModel.id that created it, enabling
+    /// title edits from RecapView to persist.
+    var sessionID: UUID?
+
     @Relationship(deleteRule: .cascade)
-    var feedback: [Feedback]
-    
-    init(title: String, keynote: String, date: String, time: String, duration: String, feedback: [Feedback]) {
-        self.title = title
-        self.keynote = keynote
-        self.date = date
-        self.time = time
-        self.duration = duration
-        self.feedback = feedback
+    var feedbacks: [HistoryFeedback]
+
+    init(
+        sesTitle: String,
+        sesKeynote: String,
+        durationSeconds: TimeInterval,
+        feedbacks: [HistoryFeedback] = [],
+        audioFileURL: String? = nil,
+        createdAt: Date = Date(),
+        sessionID: UUID? = nil
+    ) {
+        self.sesTitle = sesTitle
+        self.sesKeynote = sesKeynote
+        self.durationSeconds = durationSeconds
+        self.feedbacks = feedbacks
+        self.audioFileURL = audioFileURL
+        self.createdAt = createdAt
+        self.sessionID = sessionID
+    }
+
+    /// The single Recap→History mapper; the reverse is `toRecapModel()`. Adding a
+    /// field means touching only these two converters, not every call site.
+    /// A static factory (not a `convenience init`): SwiftData's `@Model` macro only
+    /// wires backing storage through the designated init, so a convenience init traps
+    /// on insert.
+    static func make(from recap: RecapModel) -> HistoryModel {
+        HistoryModel(
+            sesTitle: recap.sesTitle,
+            sesKeynote: recap.sesKeynote,
+            durationSeconds: recap.durationSeconds,
+            feedbacks: recap.feedback.map(HistoryFeedback.make(from:)),
+            audioFileURL: recap.audioFileURL,
+            createdAt: recap.createdAt,
+            sessionID: recap.id
+        )
+    }
+
+    func toRecapModel() -> RecapModel {
+        RecapModel(
+            id: sessionID ?? UUID(),
+            sesTitle: sesTitle,
+            sesKeynote: sesKeynote,
+            durationSeconds: durationSeconds,
+            feedback: feedbacks.map { $0.toFeedback() },
+            audioFileURL: audioFileURL,
+            createdAt: createdAt
+        )
     }
 }
 
 @Model
-class Feedback {
-    var category: String
+class HistoryFeedback {
+    var title: String
     var overall: Int
-    var unit: String //satuan
+    var unit: String
     var tips: String
-    
+    var subTitle: String
+    var category: String
     var perSlideJSON: String
-    
-    var perSlide: [Slide] {
-        Feedback.decode(perSlideJSON)
-    }
-    
-    init (category: String, overall: Int, unit: String, tips: String, perSlide: [Slide]) {
-        self.category = category
+
+    init(
+        title: String,
+        overall: Int,
+        unit: String,
+        tips: String,
+        subTitle: String,
+        category: String,
+        perSlide: [Slide]
+    ) {
+        self.title = title
         self.overall = overall
         self.unit = unit
         self.tips = tips
-        self.perSlideJSON = Feedback.encode(perSlide)
+        self.subTitle = subTitle
+        self.category = category
+        self.perSlideJSON = HistoryFeedback.encode(perSlide)
     }
-    
-    
+
+    static func make(from feedback: Feedback) -> HistoryFeedback {
+        HistoryFeedback(
+            title: feedback.title,
+            overall: feedback.overall,
+            unit: feedback.unit,
+            tips: feedback.tips,
+            subTitle: feedback.subTitle,
+            category: feedback.category,
+            perSlide: feedback.perSlide
+        )
+    }
+
+    func toFeedback() -> Feedback {
+        Feedback(
+            title: title,
+            overall: overall,
+            unit: unit,
+            tips: tips,
+            subTitle: subTitle,
+            category: category,
+            perSlide: HistoryFeedback.decode(perSlideJSON)
+        )
+    }
+
     private static func encode(_ slides: [Slide]) -> String {
         guard let data = try? JSONEncoder().encode(slides),
               let string = String(data: data, encoding: .utf8)
@@ -64,16 +138,4 @@ class Feedback {
         else { return [] }
         return slides
     }
-    
-}
-
-struct Slide: Codable {
-    let page: Int
-    let attempt: [Attempt]
-}
-
-struct Attempt: Codable {
-    let no: Int
-    let value: String
-    let timestamp: TimeInterval
 }

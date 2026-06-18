@@ -20,10 +20,15 @@ struct HomeView: View {
             .background(
                 SlideshowOverlayWindowPresenter(
                     isActive: shouldShowSlideshowOverlay,
-                    size: CGSize(
-                        width: AppSize.homeWindowWidth,
-                        height: AppSize.homeWindowHeight
-                    )
+                    size: practiceViewModel.isRecording
+                        ? CGSize(
+                            width: AppSize.practiceOverlayWidth,
+                            height: AppSize.practiceOverlayHeight
+                        )
+                        : CGSize(
+                            width: AppSize.homeWindowWidth,
+                            height: AppSize.homeWindowHeight
+                        )
                 ) {
                     if practiceViewModel.isRecording {
                         PracticeOverlayView(viewModel: practiceViewModel)
@@ -47,7 +52,7 @@ struct HomeView: View {
             .onAppear {
                 practiceViewModel.onSessionFinished = { [weak router] result in
                     let recapModel = result.toRecapModel()
-                    router?.push(.recap(.main))
+                    router?.push(.recap(.main(recapModel)))
                 }
                 applyWindowFloating(for: viewModel.state)
             }
@@ -75,6 +80,7 @@ struct HomeView: View {
             )
 
             Spacer(minLength: 0)
+
             HomeFooterView(onActivitiesTapped: showActivities)
         }
         .padding(.horizontal, AppSpacing.xl)
@@ -97,6 +103,8 @@ struct HomeView: View {
             viewModel.openPermissions()
         case .openKeynoteFile:
             viewModel.openKeynoteFile()
+        case .startSlideshow:
+            viewModel.startSlideshow()
         case .recordPractice:
             startRecording()
         }

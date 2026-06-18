@@ -376,6 +376,17 @@ actor PracticeRecordingCoordinator {
         }
     }
 
+    /// Close the current slide's interval and open a fresh one for the same slide.
+    /// Recording and recognition keep running uninterrupted; the extra interval
+    /// shows up as an additional attempt in the per-slide recap breakdown.
+    func retakeCurrentSlide() {
+        let now = clock.now()
+        closeLastInterval(at: now)
+        slideIntervals.append(
+            PracticeSlideInterval(slideNumber: currentSlideNumber, start: now, end: now)
+        )
+    }
+
     private func handleSlideChange(to newSlide: Int) {
         guard newSlide != currentSlideNumber else { return }
 

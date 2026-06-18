@@ -9,51 +9,78 @@ struct PracticeOverlayView: View {
     @ObservedObject var viewModel: PracticeViewModel
 
     var body: some View {
-        VStack {
-            Spacer()
-            HStack(alignment: .center, spacing: AppSpacing.xl) {
-                VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    PracticeControlBarView(
-                        currentSlide: viewModel.currentSlide,
-                        elapsedTime: viewModel.elapsedTime
-                    )
+        VStack(spacing: AppSpacing.xs) {
+            PracticeRecordingPulseView(
+                wpmStatus: viewModel.wpmStatus,
+                isPaused: viewModel.isPaused,
+                isReconnecting: viewModel.isReconnecting
+            )
 
-                    HStack(spacing: AppSpacing.lg) {
-                        IconCircleButton(
-                            systemName: viewModel.isPaused ? "play.fill" : "pause.fill",
-                            action: {
-                                if viewModel.isPaused {
-                                    viewModel.resume()
-                                } else {
-                                    viewModel.pause()
-                                }
-                            }
-                        )
+            Text(viewModel.wpmFeedbackText)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
 
-                        IconCircleButton(systemName: "stop.fill") {
-                            viewModel.stop()
-                        }
-                        .tint(.red)
-                    }
+            VStack(spacing: AppSpacing.xxs) {
+                Text("Current slide: \(viewModel.currentSlide)")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AppColor.textSecondary)
+                Text(viewModel.elapsedTime)
+                    .font(.system(size: 11, weight: .regular))
+                    .monospacedDigit()
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+
+            HStack(spacing: AppSpacing.lg) {
+                overlayButton(
+                    systemName: viewModel.isPaused ? "play.fill" : "pause.fill",
+                    label: viewModel.isPaused ? "Resume" : "Pause"
+                ) {
+                    if viewModel.isPaused { viewModel.resume() } else { viewModel.pause() }
                 }
 
-                Spacer()
+                overlayButton(
+                    systemName: "arrow.2.circlepath",
+                    label: "Retake"
+                ) {
+                    viewModel.retake()
+                }
 
-                PracticeWPMIndicatorView(
-                    wpm: viewModel.currentWPM,
-                    status: viewModel.wpmStatus,
-                    isReconnecting: viewModel.isReconnecting
-                )
+                overlayButton(
+                    systemName: "stop.fill",
+                    label: "Stop",
+                    foreground: .red
+                ) {
+                    viewModel.stop()
+                }
             }
-            .padding(.horizontal, AppSpacing.xl)
-            .padding(.vertical, AppSpacing.lg)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-            .padding(.horizontal, AppSpacing.xl)
-            .padding(.bottom, AppSpacing.xl)
         }
+        .padding(AppSpacing.md)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppRadius.card))
         .frame(
-            width: AppSize.homeWindowWidth,
-            height: AppSize.homeWindowHeight
+            width: AppSize.practiceOverlayWidth,
+            height: AppSize.practiceOverlayHeight
         )
+    }
+
+    @ViewBuilder
+    private func overlayButton(
+        systemName: String,
+        label: String,
+        foreground: Color = AppColor.iconSecondary,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(spacing: AppSpacing.xs) {
+            IconCircleButton(
+                systemName: systemName,
+                size: AppSize.practiceOverlayButtonSize,
+                foregroundColor: foreground,
+                action: action
+            )
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppColor.textSecondary)
+        }
     }
 }

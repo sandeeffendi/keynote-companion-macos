@@ -162,6 +162,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 )
             }
 
+            let isNewPanel = overlayPanel == nil
             let panel = overlayPanel ?? makeOverlayPanel(size: size)
             let hostingController = hostingController
                 ?? NSHostingController(rootView: overlayContent)
@@ -174,24 +175,39 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
             }
 
             overlayPanel = panel
-            parentWindow.orderOut(nil)
-            center(panel, on: screenResolver.slideshowScreen() ?? NSScreen.main)
-            panel.orderFrontRegardless()
-        }
 
-        private func center(_ window: NSWindow, on screen: NSScreen?) {
-            guard let screen else {
-                return
+            // Re-center when panel size changes (e.g. switching between recording
+            // and idle states) so the resized panel lands in the right spot.
+            let sizeChanged = !isNewPanel && panel.frame.size != size
+            if sizeChanged {
+                panel.setContentSize(size)
             }
 
-            let screenFrame = screen.frame
-            let windowFrame = window.frame
-            let origin = NSPoint(
-                x: screenFrame.midX - windowFrame.width / 2,
-                y: screenFrame.midY - windowFrame.height / 2
-            )
+            if isNewPanel {
+                parentWindow.orderOut(nil)
+            }
 
-            window.setFrameOrigin(origin)
+            if isNewPanel || sizeChanged {
+                centerPanel(panel)
+            }
+
+            if isNewPanel {
+                panel.orderFrontRegardless()
+            }
+        }
+
+        // Resolves the Keynote slideshow screen and centers the panel on it.
+        // CGRect is Sendable so extracting the frame inside assumeIsolated avoids
+        // a Swift 6 Sendable violation from returning NSScreen directly.
+        private func centerPanel(_ panel: NSPanel) {
+            let screenFrame = MainActor.assumeIsolated {
+                (screenResolver.slideshowScreen() ?? NSScreen.main)?.frame ?? .zero
+            }
+            let origin = NSPoint(
+                x: screenFrame.midX - panel.frame.width / 2,
+                y: screenFrame.midY - panel.frame.height / 2
+            )
+            panel.setFrameOrigin(origin)
         }
 
         private func makeOverlayPanel(size: CGSize) -> NSPanel {

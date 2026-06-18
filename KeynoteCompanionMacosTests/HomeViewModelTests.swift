@@ -192,6 +192,7 @@ final class HomeViewModelTests: XCTestCase {
         keynoteStatuses: [KeynoteRuntimeStatus],
         didOpenFile: Bool = true,
         fileOpenResult: MockKeynoteFileOpenResult? = nil,
+        startSlideshowShouldThrow: Bool = false,
         automationStore: MockKeynoteAutomationStatusStore =
             MockKeynoteAutomationStatusStore(initial: .authorized)
     ) -> HomeViewModel {
@@ -212,9 +213,41 @@ final class HomeViewModelTests: XCTestCase {
             keynoteFileOpener: MockKeynoteFileOpener(
                 result: fileOpenResult ?? .success(didOpenFile)
             ),
+            slideshowStarter: MockKeynoteSlideshowStarter(
+                shouldThrow: startSlideshowShouldThrow
+            ),
             automationStatusStore: automationStore,
             pollingIntervalNanoseconds: 1_000
         )
+    }
+
+    func testStartSlideshowSuccessTransitionsToActive() async {
+        let viewModel = makeViewModel(
+            initialState: .noKeynoteSlideshowActive,
+            keynoteStatuses: [
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "Deck")
+            ]
+        )
+
+        await viewModel.startSelectedSlideshow()
+
+        XCTAssertEqual(viewModel.state, .keynoteSlideshowActive)
+        XCTAssertEqual(viewModel.sessionStatus, .keynoteSlideshowActive)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testStartSlideshowFailureShowsErrorAndPreservesState() async {
+        let viewModel = makeViewModel(
+            initialState: .noKeynoteSlideshowActive,
+            keynoteStatuses: [],
+            startSlideshowShouldThrow: true
+        )
+
+        await viewModel.startSelectedSlideshow()
+
+        XCTAssertEqual(viewModel.state, .noKeynoteSlideshowActive)
+        XCTAssertEqual(viewModel.sessionStatus, .startSlideshowFailed)
+        XCTAssertNotNil(viewModel.errorMessage)
     }
 
     func testTargetNotRunningWithUnauthorizedCacheShowsPermissionMissing() async {
@@ -341,6 +374,16 @@ private struct MockKeynoteFileOpener: KeynoteFileOpening {
             return didOpenFile
         case .cancellation:
             throw CancellationError()
+        }
+    }
+}
+
+private struct MockKeynoteSlideshowStarter: KeynoteSlideshowStarting {
+    let shouldThrow: Bool
+
+    func startSlideshow() async throws {
+        if shouldThrow {
+            throw KeynoteStatusError.appleScriptFailed("mock start failure")
         }
     }
 }
