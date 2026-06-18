@@ -28,7 +28,8 @@ struct HomeView: View {
                         : CGSize(
                             width: AppSize.homeWindowWidth,
                             height: AppSize.homeWindowHeight
-                        )
+                        ),
+                    position: practiceViewModel.isRecording ? .topRight : .center
                 ) {
                     if practiceViewModel.isRecording {
                         PracticeOverlayView(viewModel: practiceViewModel)

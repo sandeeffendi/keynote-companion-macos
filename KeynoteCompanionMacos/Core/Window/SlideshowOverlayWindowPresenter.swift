@@ -7,6 +7,11 @@ import AppKit
 import CoreGraphics
 import SwiftUI
 
+enum OverlayPosition {
+    case center
+    case topRight
+}
+
 struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
     NSViewRepresentable {
     static var overlayPanelStyleMask: NSWindow.StyleMask {
@@ -33,14 +38,17 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
     let isActive: Bool
     let size: CGSize
     private let overlayContent: OverlayContent
+    let position: OverlayPosition
 
     init(
         isActive: Bool,
         size: CGSize,
+        position: OverlayPosition,
         @ViewBuilder overlayContent: () -> OverlayContent
     ) {
         self.isActive = isActive
         self.size = size
+        self.position = position
         self.overlayContent = overlayContent()
     }
 
@@ -56,6 +64,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 parentWindow: view.window,
                 isActive: isActive,
                 size: size,
+                position: position,
                 overlayContent: overlayContent
             )
         }
@@ -69,6 +78,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 parentWindow: nsView.window,
                 isActive: isActive,
                 size: size,
+                position: position,
                 overlayContent: overlayContent
             )
         }
@@ -103,6 +113,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
             parentWindow: NSWindow?,
             isActive: Bool,
             size: CGSize,
+            position: OverlayPosition,
             overlayContent: OverlayContent
         ) {
             guard let parentWindow else {
@@ -118,6 +129,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 present(
                     parentWindow: parentWindow,
                     size: size,
+                    position: position,
                     overlayContent: overlayContent
                 )
             } else {
@@ -151,6 +163,7 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
         private func present(
             parentWindow: NSWindow,
             size: CGSize,
+            position: OverlayPosition,
             overlayContent: OverlayContent
         ) {
             if originalWindowState == nil {
@@ -188,7 +201,13 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
             }
 
             if isNewPanel || sizeChanged {
-                centerPanel(panel)
+                switch position {
+                case .center:
+                    centerPanel(panel)
+
+                case .topRight:
+                    positionPanelTopRight(panel)
+                }
             }
 
             if isNewPanel {
@@ -207,6 +226,22 @@ struct SlideshowOverlayWindowPresenter<OverlayContent: View>:
                 x: screenFrame.midX - panel.frame.width / 2,
                 y: screenFrame.midY - panel.frame.height / 2
             )
+            panel.setFrameOrigin(origin)
+        }
+        
+        //biar dia top trailing
+        private func positionPanelTopRight(_ panel: NSPanel) {
+            let screenFrame = MainActor.assumeIsolated {
+                (screenResolver.slideshowScreen() ?? NSScreen.main)?.visibleFrame ?? .zero
+            }
+
+            let margin: CGFloat = 20
+
+            let origin = NSPoint(
+                x: screenFrame.maxX - panel.frame.width - margin,
+                y: screenFrame.maxY - panel.frame.height - margin
+            )
+
             panel.setFrameOrigin(origin)
         }
 
