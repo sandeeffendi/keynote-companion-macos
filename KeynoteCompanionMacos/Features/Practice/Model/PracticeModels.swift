@@ -28,17 +28,6 @@ struct PracticeResult: Sendable {
 
     func toRecapModel() -> RecapModel {
         let now = Date()
-        let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        let dateStr = formatter.string(from: now)
-
-        formatter.dateFormat = "HH:mm"
-        let timeStr = formatter.string(from: now)
-
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        let durationStr = String(format: "%02d:%02d", minutes, seconds)
-
         let perSlide = perSlideWithAttempts()
 
         let overallWPM: Int = {
@@ -71,9 +60,7 @@ struct PracticeResult: Sendable {
         return RecapModel(
             sesTitle: derivedSessionTitle(),
             sesKeynote: keynoteFileName,
-            date: dateStr,
-            time: timeStr,
-            duration: durationStr,
+            durationSeconds: duration,
             feedback: [feedback],
             audioFileURL: audioFileURL?.absoluteString,
             createdAt: now

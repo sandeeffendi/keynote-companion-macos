@@ -8,14 +8,12 @@
 import AVFoundation
 import Foundation
 import SwiftUI
-import SwiftData
 import AppKit
 
 struct RecapView: View {
     @EnvironmentObject private var route: AppRouter
     var isFromHistory: Bool
     @StateObject private var viewModel: RecapViewModel
-    @Environment(\.modelContext) private var modelContext
 
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
@@ -52,7 +50,17 @@ struct RecapView: View {
         .navigationTitle("Tiempo")
         .navigationBarBackButtonHidden()
         .task {
-            if !isFromHistory { viewModel.autoSave(context: modelContext) }
+            if !isFromHistory { viewModel.autoSave() }
+        }
+        .confirmationDialog(
+            "Delete Session?",
+            isPresented: $deleteAlert,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { performDelete() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
         }
     }
 
@@ -68,7 +76,7 @@ struct RecapView: View {
                     .padding(.bottom, AppSpacing.md)
                     Spacer()
                     IconCircleButton(systemName: "trash") {
-                        deleteConfirm()
+                        deleteAlert = true
                     }
                 }
             }
@@ -118,11 +126,11 @@ struct RecapView: View {
 
     private var metadataRow: some View {
         HStack(spacing: AppSpacing.sm) {
-            Text(viewModel.recapData.date)
+            Text(SessionFormatting.sessionDate(viewModel.recapData.createdAt))
             Divider().frame(height: AppSize.footerSeparatorHeight)
-            Text(viewModel.recapData.time)
+            Text(SessionFormatting.sessionTime(viewModel.recapData.createdAt))
             Divider().frame(height: AppSize.footerSeparatorHeight)
-            Text(viewModel.recapData.duration)
+            Text(SessionFormatting.duration(viewModel.recapData.durationSeconds))
         }
         .font(AppFont.recapMeta)
         .foregroundStyle(AppColor.textSecondary)
@@ -354,28 +362,17 @@ struct RecapView: View {
 
     private func commitTitleEdit() {
         let trimmed = editingTitleText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { viewModel.updateTitleInHistory(trimmed, context: modelContext) }
+        if !trimmed.isEmpty { viewModel.updateTitle(trimmed) }
         isEditingTitle = false
     }
     
-    func deleteConfirm() {
-        let alert = NSAlert()
-        alert.messageText = "Delete Session?"
-        alert.informativeText = "This action cannot be undone."
-        alert.alertStyle = .warning
-        alert.icon = NSImage(systemSymbolName: "trash.fill",accessibilityDescription: "Icon Delete")
-        alert.addButton(withTitle: "Delete").hasDestructiveAction = true
-        alert.addButton(withTitle: "Cancel")
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            if viewModel.deleteSession(context: modelContext) {
-                route.replace(with: .history(.main))
-            }
+    private func performDelete() {
+        if viewModel.deleteSession() {
+            route.replace(with: .history(.main))
         }
     }
-    
 }
 
 #Preview {
-    RecapView(isFromHistory: true, viewModel: RecapViewModel())
+    RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: .preview))
 }

@@ -13,7 +13,7 @@ final class HistoryViewModel: ObservableObject {
     /// Groups sessions by their display date string, with sessions and groups
     /// ordered most-recent-first using the `createdAt` Date (chronologically correct).
     func grouped(_ sessions: [HistoryModel]) -> [(date: String, sessions: [HistoryModel])] {
-        let grouped = Dictionary(grouping: sessions, by: { $0.date })
+        let grouped = Dictionary(grouping: sessions, by: { SessionFormatting.sessionDate($0.createdAt) })
         return grouped
             .map { (date: $0.key, sessions: $0.value.sorted { $0.createdAt > $1.createdAt }) }
             .sorted {

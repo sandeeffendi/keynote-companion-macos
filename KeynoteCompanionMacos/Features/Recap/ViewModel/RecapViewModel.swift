@@ -8,7 +8,6 @@
 import AVFoundation
 import Combine
 import Foundation
-import SwiftData
 
 /// Mutually-exclusive ordering/filter applied to the per-slide WPM list, chosen
 /// from the "Highlight" section's filter menu. Ascending/Descending sort by slide
@@ -61,66 +60,21 @@ final class RecapViewModel: ObservableObject {
     /// (per-slide isolated playback). Cleared by any full-session action.
     private var segmentEnd: TimeInterval?
 
-    init(
-        recapData: RecapModel = RecapModel(
-            sesTitle: "Practice Recording 1",
-            sesKeynote: "HIG Reading Materials",
-            date: "Monday, 17 August 2945",
-            time: "10:00",
-            duration: "00:05:00",
-            feedback: [
-                Feedback(
-                    title: "Speaking Pace",
-                    overall: 152,
-                    unit: "WPM",
-                    tips: "On slide 5, your speaking pace was quite fast. Try slowing down.",
-                    subTitle: "Your average pace is slightly fast",
-                    category: "WPM",
-                    perSlide: [
-                        Slide(no: 1, value: 120, timestamp: 0),
-                        Slide(no: 2, value: 145, timestamp: 63.0),
-                        Slide(no: 3, value: 100, timestamp: 130.5)
-                    ]
-                ),
-                Feedback(
-                    title: "Filler Words",
-                    overall: 60,
-                    unit: "words",
-                    tips: "On slide 5, you used 15 filler words. Try pausing between sentences.",
-                    subTitle: "You used quite a lot of filler words",
-                    category: "Filler",
-                    perSlide: [
-                        Slide(no: 1, value: 120, timestamp: 0),
-                        Slide(no: 2, value: 145, timestamp: 63.0),
-                        Slide(no: 3, value: 100, timestamp: 130.5)
-                    ]
-                )
-            ]
-        )
-    ) {
+    private let store: SessionStoring
+
+    convenience init(recapData: RecapModel = .placeholder()) {
+        self.init(recapData: recapData, store: SwiftDataSessionStore())
+    }
+
+    init(recapData: RecapModel, store: SessionStoring) {
         self.recapData = recapData
+        self.store = store
     }
 
     // MARK: - Title editing
 
-    /// Update the in-memory session title. When the session exists in SwiftData
-    /// (linked via `recapData.id` ↔ `HistoryModel.sessionID`), also persists.
-    func updateTitleInHistory(_ newTitle: String, context: ModelContext) {
-        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        updateTitle(trimmed)
-        let sessionID = recapData.id
-        do {
-            let descriptor = FetchDescriptor<HistoryModel>(
-                predicate: #Predicate { $0.sessionID == sessionID }
-            )
-            if let record = try context.fetch(descriptor).first {
-                record.sesTitle = trimmed
-                try context.save()
-            }
-        } catch {}
-    }
-
+    /// Rename the session: update the in-memory recap and persist the new title
+    /// for the matching history record (linked via `recapData.id`).
     func updateTitle(_ newTitle: String) {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -128,34 +82,17 @@ final class RecapViewModel: ObservableObject {
             id: recapData.id,
             sesTitle: trimmed,
             sesKeynote: recapData.sesKeynote,
-            date: recapData.date,
-            time: recapData.time,
-            duration: recapData.duration,
+            durationSeconds: recapData.durationSeconds,
             feedback: recapData.feedback,
             audioFileURL: recapData.audioFileURL,
             createdAt: recapData.createdAt
         )
+        store.updateTitle(of: recapData.id, to: trimmed)
     }
-    
-    func deleteSession(context: ModelContext) -> Bool {
-        let sessionID = recapData.id
 
-        do {
-            let descriptor = FetchDescriptor<HistoryModel>(
-                predicate: #Predicate { $0.sessionID == sessionID }
-            )
-
-            guard let record = try context.fetch(descriptor).first else {
-                return false
-            }
-
-            context.delete(record)
-            try context.save()
-
-            return true
-        } catch {
-            return false
-        }
+    @discardableResult
+    func deleteSession() -> Bool {
+        store.delete(sessionID: recapData.id)
     }
 
     // MARK: - Audio
@@ -239,39 +176,11 @@ final class RecapViewModel: ObservableObject {
         startProgressTimer()
     }
 
-    func autoSave(context: ModelContext) {
+    /// Persist this session once, the first time the recap is shown for a live run.
+    func autoSave() {
         guard !hasSaved else { return }
         hasSaved = true
-        saveRecap(context: context)
-    }
-
-    func saveRecap(context: ModelContext) {
-        let historyFeedbacks = recapData.feedback.map { feedback in
-            HistoryFeedback(
-                title: feedback.title,
-                overall: feedback.overall,
-                unit: feedback.unit,
-                tips: feedback.tips,
-                subTitle: feedback.subTitle,
-                category: feedback.category,
-                perSlide: feedback.perSlide
-            )
-        }
-
-        let recap = HistoryModel(
-            sesTitle: recapData.sesTitle,
-            sesKeynote: recapData.sesKeynote,
-            date: recapData.date,
-            time: recapData.time,
-            duration: recapData.duration,
-            feedbacks: historyFeedbacks,
-            audioFileURL: recapData.audioFileURL,
-            createdAt: recapData.createdAt,
-            sessionID: recapData.id
-        )
-
-        context.insert(recap)
-        try? context.save()
+        store.save(recapData)
     }
 
     // MARK: - Slide navigation & filter
@@ -300,13 +209,8 @@ final class RecapViewModel: ObservableObject {
         return result
     }
 
-    var formattedCurrentTime: String { formatSeconds(playbackProgress * totalDuration) }
-    var formattedTotalDuration: String { formatSeconds(totalDuration) }
-
-    private func formatSeconds(_ s: TimeInterval) -> String {
-        let m = Int(s) / 60, sec = Int(s) % 60
-        return String(format: "%d:%02d", m, sec)
-    }
+    var formattedCurrentTime: String { SessionFormatting.clock(playbackProgress * totalDuration) }
+    var formattedTotalDuration: String { SessionFormatting.clock(totalDuration) }
 
     func skipToPreviousSlide() {
         guard let player = audioPlayer else { return }

@@ -11,9 +11,9 @@ struct RecapModel: Hashable {
     let id: UUID
     let sesTitle: String
     let sesKeynote: String
-    let date: String
-    let time: String
-    let duration: String
+    /// Session length in seconds; the displayed duration string is derived via
+    /// `SessionFormatting`. Date/time are likewise derived from `createdAt`.
+    let durationSeconds: TimeInterval
     let feedback: [Feedback]
     let audioFileURL: String?
     let createdAt: Date
@@ -22,9 +22,7 @@ struct RecapModel: Hashable {
         id: UUID = UUID(),
         sesTitle: String,
         sesKeynote: String,
-        date: String,
-        time: String,
-        duration: String,
+        durationSeconds: TimeInterval,
         feedback: [Feedback],
         audioFileURL: String? = nil,
         createdAt: Date = Date()
@@ -32,9 +30,7 @@ struct RecapModel: Hashable {
         self.id = id
         self.sesTitle = sesTitle
         self.sesKeynote = sesKeynote
-        self.date = date
-        self.time = time
-        self.duration = duration
+        self.durationSeconds = durationSeconds
         self.feedback = feedback
         self.audioFileURL = audioFileURL
         self.createdAt = createdAt
@@ -44,9 +40,7 @@ struct RecapModel: Hashable {
         RecapModel(
             sesTitle: "Practice Recording",
             sesKeynote: "",
-            date: "",
-            time: "",
-            duration: "00:00",
+            durationSeconds: 0,
             feedback: []
         )
     }
@@ -54,6 +48,32 @@ struct RecapModel: Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
     static func == (lhs: RecapModel, rhs: RecapModel) -> Bool { lhs.id == rhs.id }
 }
+
+#if DEBUG
+extension RecapModel {
+    /// Rich sample used only by SwiftUI previews — never shipped in a release path.
+    static let preview = RecapModel(
+        sesTitle: "Practice Recording 1",
+        sesKeynote: "HIG Reading Materials",
+        durationSeconds: 300,
+        feedback: [
+            Feedback(
+                title: "Speaking Pace",
+                overall: 152,
+                unit: "WPM",
+                tips: "On slide 5, your speaking pace was quite fast. Try slowing down.",
+                subTitle: "Your average pace is slightly fast",
+                category: "WPM",
+                perSlide: [
+                    Slide(no: 1, value: 120, timestamp: 0),
+                    Slide(no: 2, value: 145, timestamp: 63.0),
+                    Slide(no: 3, value: 100, timestamp: 130.5)
+                ]
+            )
+        ]
+    )
+}
+#endif
 
 struct Feedback: Hashable {
     let title: String

@@ -12,14 +12,14 @@ import SwiftData
 class HistoryModel {
     var sesTitle: String
     var sesKeynote: String
-    var date: String
-    var time: String
-    var duration: String
+    /// Session length in seconds. Display date/time/duration are derived from
+    /// `createdAt` + this value via `SessionFormatting` — never stored as strings.
+    var durationSeconds: TimeInterval
     var audioFileURL: String?
     /// Chronological sort key; set to session end time when the session is saved.
     var createdAt: Date
     /// Links this record back to the RecapModel.id that created it, enabling
-    /// title edits from RecapView to persist. Nil for sessions migrated from V2.
+    /// title edits from RecapView to persist.
     var sessionID: UUID?
 
     @Relationship(deleteRule: .cascade)
@@ -28,9 +28,7 @@ class HistoryModel {
     init(
         sesTitle: String,
         sesKeynote: String,
-        date: String,
-        time: String,
-        duration: String,
+        durationSeconds: TimeInterval,
         feedbacks: [HistoryFeedback] = [],
         audioFileURL: String? = nil,
         createdAt: Date = Date(),
@@ -38,13 +36,28 @@ class HistoryModel {
     ) {
         self.sesTitle = sesTitle
         self.sesKeynote = sesKeynote
-        self.date = date
-        self.time = time
-        self.duration = duration
+        self.durationSeconds = durationSeconds
         self.feedbacks = feedbacks
         self.audioFileURL = audioFileURL
         self.createdAt = createdAt
         self.sessionID = sessionID
+    }
+
+    /// The single Recap→History mapper; the reverse is `toRecapModel()`. Adding a
+    /// field means touching only these two converters, not every call site.
+    /// A static factory (not a `convenience init`): SwiftData's `@Model` macro only
+    /// wires backing storage through the designated init, so a convenience init traps
+    /// on insert.
+    static func make(from recap: RecapModel) -> HistoryModel {
+        HistoryModel(
+            sesTitle: recap.sesTitle,
+            sesKeynote: recap.sesKeynote,
+            durationSeconds: recap.durationSeconds,
+            feedbacks: recap.feedback.map(HistoryFeedback.make(from:)),
+            audioFileURL: recap.audioFileURL,
+            createdAt: recap.createdAt,
+            sessionID: recap.id
+        )
     }
 
     func toRecapModel() -> RecapModel {
@@ -52,9 +65,7 @@ class HistoryModel {
             id: sessionID ?? UUID(),
             sesTitle: sesTitle,
             sesKeynote: sesKeynote,
-            date: date,
-            time: time,
-            duration: duration,
+            durationSeconds: durationSeconds,
             feedback: feedbacks.map { $0.toFeedback() },
             audioFileURL: audioFileURL,
             createdAt: createdAt
@@ -88,6 +99,18 @@ class HistoryFeedback {
         self.subTitle = subTitle
         self.category = category
         self.perSlideJSON = HistoryFeedback.encode(perSlide)
+    }
+
+    static func make(from feedback: Feedback) -> HistoryFeedback {
+        HistoryFeedback(
+            title: feedback.title,
+            overall: feedback.overall,
+            unit: feedback.unit,
+            tips: feedback.tips,
+            subTitle: feedback.subTitle,
+            category: feedback.category,
+            perSlide: feedback.perSlide
+        )
     }
 
     func toFeedback() -> Feedback {

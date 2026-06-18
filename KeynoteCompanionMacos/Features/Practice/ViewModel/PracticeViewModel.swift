@@ -144,7 +144,6 @@ final class PracticeViewModel: ObservableObject {
     }
 
     private func formatElapsed(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        return String(format: "%02d:%02d", total / 60, total % 60)
+        SessionFormatting.duration(seconds)
     }
 }
