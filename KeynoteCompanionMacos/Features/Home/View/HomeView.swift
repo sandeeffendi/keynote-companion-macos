@@ -82,7 +82,7 @@ struct HomeView: View {
 
             Spacer(minLength: 0)
 
-            HomeFooterView(onActivitiesTapped: showActivities)
+            HomeFooterView(onActivitiesTapped: showActivities, onCanceltapped: cancelPractice, viewState: viewModel.state)
         }
         .padding(.horizontal, AppSpacing.xl)
         .padding(.top, AppSpacing.lg)
@@ -114,6 +114,12 @@ struct HomeView: View {
     private func showActivities() {
         viewModel.showActivities()
         router.push(.history(.main))
+    }
+    
+    private func cancelPractice() {
+        viewModel.cancelPractice()
+        
+        router.popToRoot()
     }
 
     private func startRecording() {

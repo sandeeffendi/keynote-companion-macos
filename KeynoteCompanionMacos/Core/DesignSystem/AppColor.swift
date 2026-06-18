@@ -24,6 +24,7 @@ enum AppColor {
     static let controlTextDisabled = Color(nsColor: .disabledControlTextColor)
     static let controlAccent = Color(nsColor: .systemBlue)
     static let onControlAccent = Color(light: .white, dark: .white)
+    static let destructive = Color(nsColor: .systemRed)
 
     // aditional color
     static let borderSubtle = Color(
