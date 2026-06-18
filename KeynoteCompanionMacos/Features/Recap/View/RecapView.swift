@@ -368,11 +368,12 @@ struct RecapView: View {
         alert.addButton(withTitle: "Cancel")
 
         if alert.runModal() == .alertFirstButtonReturn {
-            deleteSession()
+            if viewModel.deleteSession(context: modelContext) {
+                route.replace(with: .history(.main))
+            }
         }
     }
     
-    func deleteSession() {}
 }
 
 #Preview {

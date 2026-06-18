@@ -136,6 +136,27 @@ final class RecapViewModel: ObservableObject {
             createdAt: recapData.createdAt
         )
     }
+    
+    func deleteSession(context: ModelContext) -> Bool {
+        let sessionID = recapData.id
+
+        do {
+            let descriptor = FetchDescriptor<HistoryModel>(
+                predicate: #Predicate { $0.sessionID == sessionID }
+            )
+
+            guard let record = try context.fetch(descriptor).first else {
+                return false
+            }
+
+            context.delete(record)
+            try context.save()
+
+            return true
+        } catch {
+            return false
+        }
+    }
 
     // MARK: - Audio
 
