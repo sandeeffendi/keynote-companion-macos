@@ -9,6 +9,7 @@ import AVFoundation
 import Foundation
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct RecapView: View {
     @EnvironmentObject private var route: AppRouter
@@ -20,6 +21,7 @@ struct RecapView: View {
     @State private var editingTitleText: String = ""
     @State private var isHoveringTitle: Bool = false
     @State private var selectedFilter: SlideWPMFilter = .ascending
+    @State private var deleteAlert: Bool = false
 
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
         self.isFromHistory = isFromHistory
@@ -59,10 +61,16 @@ struct RecapView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             if isFromHistory {
-                IconCircleButton(systemName: "chevron.left") {
-                    route.replace(with: .history(.main))
+                HStack{
+                    IconCircleButton(systemName: "chevron.left") {
+                        route.replace(with: .history(.main))
+                    }
+                    .padding(.bottom, AppSpacing.md)
+                    Spacer()
+                    IconCircleButton(systemName: "trash") {
+                        deleteConfirm()
+                    }
                 }
-                .padding(.bottom, AppSpacing.md)
             }
 
             titleView
@@ -94,7 +102,13 @@ struct RecapView: View {
                     .opacity(isHoveringTitle ? 1 : 0)
             }
             .contentShape(Rectangle())
-            .onHover { isHoveringTitle = $0 }
+            .onHover { isHoveringTitle = $0
+                if isHoveringTitle {
+                    NSCursor.iBeam.push()
+                }else{
+                    NSCursor.pop()
+                }
+            }
             .onTapGesture {
                 editingTitleText = viewModel.recapData.sesTitle
                 isEditingTitle = true
@@ -343,6 +357,22 @@ struct RecapView: View {
         if !trimmed.isEmpty { viewModel.updateTitleInHistory(trimmed, context: modelContext) }
         isEditingTitle = false
     }
+    
+    func deleteConfirm() {
+        let alert = NSAlert()
+        alert.messageText = "Delete Session?"
+        alert.informativeText = "This action cannot be undone."
+        alert.alertStyle = .warning
+        alert.icon = NSImage(systemSymbolName: "trash.fill",accessibilityDescription: "Icon Delete")
+        alert.addButton(withTitle: "Delete").hasDestructiveAction = true
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            deleteSession()
+        }
+    }
+    
+    func deleteSession() {}
 }
 
 #Preview {
