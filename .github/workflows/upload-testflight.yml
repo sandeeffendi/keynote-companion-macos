@@ -3,7 +3,7 @@ name: Upload TestFlight Build
 on:
   push:
     branches:
-      - main-cicd
+      - main
 
 jobs:
   testflight:
