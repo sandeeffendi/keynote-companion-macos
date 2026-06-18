@@ -74,24 +74,31 @@ class HistoryModel {
 }
 
 @Model
-class Feedback {
-    var category: String
+class HistoryFeedback {
+    var title: String
     var overall: Int
-    var unit: String //satuan
+    var unit: String
     var tips: String
-    
+    var subTitle: String
+    var category: String
     var perSlideJSON: String
-    
-    var perSlide: [Slide] {
-        Feedback.decode(perSlideJSON)
-    }
-    
-    init (category: String, overall: Int, unit: String, tips: String, perSlide: [Slide]) {
-        self.category = category
+
+    init(
+        title: String,
+        overall: Int,
+        unit: String,
+        tips: String,
+        subTitle: String,
+        category: String,
+        perSlide: [Slide]
+    ) {
+        self.title = title
         self.overall = overall
         self.unit = unit
         self.tips = tips
-        self.perSlideJSON = Feedback.encode(perSlide)
+        self.subTitle = subTitle
+        self.category = category
+        self.perSlideJSON = HistoryFeedback.encode(perSlide)
     }
 
     static func make(from feedback: Feedback) -> HistoryFeedback {
@@ -131,16 +138,4 @@ class Feedback {
         else { return [] }
         return slides
     }
-    
-}
-
-struct Slide: Codable {
-    let page: Int
-    let attempt: [Attempt]
-}
-
-struct Attempt: Codable {
-    let no: Int
-    let value: String
-    let timestamp: TimeInterval
 }

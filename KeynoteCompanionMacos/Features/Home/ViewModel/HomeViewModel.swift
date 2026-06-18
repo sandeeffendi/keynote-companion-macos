@@ -92,8 +92,6 @@ final class HomeViewModel: ObservableObject {
     }
 
     func showActivities() {}
-    
-    func showRecap() {}
 
     func openKeynoteFile() {
         openFileTask?.cancel()
@@ -441,6 +439,50 @@ final class HomeViewModel: ObservableObject {
                 .openFileFailed,
                 errorMessage: error.localizedDescription
             )
+        }
+    }
+
+    func startSelectedSlideshow() async {
+        await startSelectedSlideshow(requestID: nil)
+    }
+
+    private func startSelectedSlideshow(requestID: UUID?) async {
+        defer {
+            clearStartSlideshowTaskIfCurrent(requestID: requestID)
+        }
+
+        do {
+            try await slideshowStarter.startSlideshow()
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            // Reflect the new playing state immediately; the poll loop is the backup.
+            await refreshSessionStatus()
+        } catch is CancellationError {
+            return
+        } catch KeynoteStatusError.keynoteUnavailable {
+            apply(
+                .keynoteUnavailable,
+                errorMessage: "Keynote is not installed on this Mac."
+            )
+        } catch {
+            apply(
+                .startSlideshowFailed,
+                errorMessage: error.localizedDescription
+            )
+        }
+    }
+
+    private func clearStartSlideshowTaskIfCurrent(requestID: UUID?) {
+        guard let requestID else {
+            return
+        }
+
+        if startSlideshowRequestID == requestID {
+            startSlideshowTask = nil
+            startSlideshowRequestID = nil
         }
     }
 

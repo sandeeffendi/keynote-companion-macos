@@ -9,11 +9,6 @@ import AppKit
 import SwiftUI
 
 // PIC: arfian
-//
-// Monochrome, system-adaptive palette. Prefer Apple semantic colors (label /
-// secondaryLabel / separator / windowBackground …) so the UI follows the user's
-// macOS appearance automatically. Use the `Color(light:dark:)` helper only where
-// no semantic color expresses the intent (translucent glass rims, overlays).
 enum AppColor {
     // text app color
     static let textPrimary = Color.primary
@@ -67,11 +62,12 @@ extension Color {
 }
 
 extension Color {
-    /// Builds an appearance-adaptive color from explicit light/dark `NSColor`s.
-    /// Used for translucent surfaces that have no matching semantic system color.
     init(light: NSColor, dark: NSColor) {
-        self.init(nsColor: NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
-        })
+        self.init(
+            nsColor: NSColor(name: nil) { appearance in
+                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                    ? dark : light
+            }
+        )
     }
 }

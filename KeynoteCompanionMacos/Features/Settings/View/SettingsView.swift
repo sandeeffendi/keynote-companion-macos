@@ -7,7 +7,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var tourController: TourController
     @StateObject private var viewModel: SettingsViewModel
 #if DEBUG
     @StateObject private var onboardingViewModel = OnboardingViewModel()
@@ -26,10 +25,8 @@ struct SettingsView: View {
                     systemName: "chevron.left",
                     size: Metrics.backButtonSize
                 ) {
-                    tourController.complete(.backToHome)
                     router.popToRoot()
                 }
-                .tourTarget(.backToHome)
 
                 HStack(spacing: AppSpacing.md) {
                     Text("Settings")
@@ -229,30 +226,6 @@ struct SettingsView_Previews: PreviewProvider {
                 }
             }
         }
-        .onChange(of: authorizedSignature) { _, _ in
-            advanceTourForGrantedPermissions()
-        }
-    }
-
-    /// A value that changes whenever any permission flips to/from authorized, so the tour
-    /// can react when the user grants the highlighted permission.
-    private var authorizedSignature: [Bool] {
-        viewModel.settingsData.permissionItems.map { $0.status == .authorized }
-    }
-
-    private func advanceTourForGrantedPermissions() {
-        for item in viewModel.settingsData.permissionItems
-        where item.status == .authorized {
-            tourController.complete(tourStep(for: item.permissionType))
-        }
-    }
-
-    private func tourStep(for type: PermissionType) -> TourStep {
-        switch type {
-        case .microphone: return .micPermission
-        case .keynoteAutomation: return .screenPermission
-        case .speechRecognition, .wpmPlaceholder: return .wpmPermission
-        }
     }
 
 #if DEBUG
@@ -368,6 +341,5 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView(viewModel: SettingsViewModel())
             .environmentObject(AppRouter())
-            .environmentObject(TourController())
     }
 }

@@ -11,9 +11,9 @@ import SwiftUI
 import AppKit
 
 struct RecapView: View {
-    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var route: AppRouter
+    var isFromHistory: Bool
     @StateObject private var viewModel: RecapViewModel
-    let prev: RecapRoute
 
     @State private var isEditingTitle: Bool = false
     @State private var editingTitleText: String = ""
@@ -24,8 +24,8 @@ struct RecapView: View {
     init(isFromHistory: Bool, viewModel: RecapViewModel) {
         self.isFromHistory = isFromHistory
         _viewModel = StateObject(wrappedValue: viewModel)
-        self.prev = prev
     }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header shares the same horizontal inset as the content below so the
@@ -255,7 +255,6 @@ struct RecapView: View {
             audioPlayer
         }
     }
-    
 
     private var audioPlayer: some View {
         HStack(spacing: AppSpacing.md) {
