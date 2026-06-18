@@ -22,10 +22,10 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */ = {
+		D36219862FE2A8DB00EDD956 /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Resources/ML/Frameworks/whisper.xcframework,
+				Info.plist,
 			);
 			target = D311530B2FC53E1900D2705F /* KeynoteCompanionMacos */;
 		};
@@ -40,7 +40,7 @@
 		D311530E2FC53E1900D2705F /* KeynoteCompanionMacos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				D311531A2FC53E1A00D2705F /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */,
+				D36219862FE2A8DB00EDD956 /* Exceptions for "KeynoteCompanionMacos" folder in "KeynoteCompanionMacos" target */,
 			);
 			path = KeynoteCompanionMacos;
 			sourceTree = "<group>";
@@ -395,12 +395,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KeynoteCompanionMacos/KeynoteCompanionMacos.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = FJ9UDU5R7B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -416,7 +415,10 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KeynoteCompanionMacos/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
@@ -425,9 +427,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.Tiempo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sedaf.Tiempo1;
 				PRODUCT_MODULE_NAME = KeynoteCompanionMacos;
 				PRODUCT_NAME = Tiempo;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -447,11 +449,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KeynoteCompanionMacos/KeynoteCompanionMacos.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = FJ9UDU5R7B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -468,7 +469,10 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KeynoteCompanionMacos/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tiempo;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Tiempo needs permission to automate Keynote so it can detect open presentations and slideshow mode.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Tiempo needs microphone access to analyze speech during presentations.";
@@ -477,9 +481,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.Tiempo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sedaf.Tiempo1;
 				PRODUCT_MODULE_NAME = KeynoteCompanionMacos;
 				PRODUCT_NAME = Tiempo;
 				PROVISIONING_PROFILE_SPECIFIER = "";
