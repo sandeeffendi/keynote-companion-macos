@@ -48,7 +48,17 @@ jobs:
             -t cert \
             -f pkcs12 \
             -k "$KEYCHAIN_PATH"
+          echo "Codesigning identities found after import:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          IDENTITY_COUNT=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -c 'Apple Distribution' || true)
+          if [ "$IDENTITY_COUNT" -eq 0 ]; then
+            echo "::error::No valid 'Apple Distribution' codesigning identity in the keychain after import."
+            echo "::error::BUILD_CERTIFICATE_BASE64 almost certainly holds a certificate WITHOUT its private key (cert-only .p12)."
+            echo "::error::Re-export a .p12 that INCLUDES the private key (Keychain Access > My Certificates > select the identity > Export as .p12), then update the secret. Verify locally: openssl pkcs12 -in cert.p12 -nodes -passin pass:PW | grep -i 'PRIVATE KEY'"
+            echo "--- All codesigning certs in keychain (including invalid, for debugging): ---"
+            security find-identity -p codesigning "$KEYCHAIN_PATH" || true
+            exit 1
+          fi
           security set-key-partition-list \
             -S apple-tool:,apple:,codesign: \
             -s \
