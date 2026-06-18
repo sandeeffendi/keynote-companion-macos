@@ -10,5 +10,4 @@ import Foundation
 enum RecapRoute: Hashable {
     case main(RecapModel)
     case fromHistory(RecapModel)
-    case home
 }

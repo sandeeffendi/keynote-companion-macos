@@ -11,121 +11,131 @@ import SwiftData
 struct HistoryView: View {
     @EnvironmentObject private var route: AppRouter
     @StateObject var viewModel = HistoryViewModel()
-    @Query(sort: \HistoryModel.date, order: .reverse) var sessions: [HistoryModel]
-    @State private var sessionDelete: HistoryModel? = nil
-    @State private var historyToDetail: Bool = false
+    @Query(sort: \HistoryModel.createdAt, order: .reverse) private var sessions: [HistoryModel]
+    @State private var searchText: String = ""
 
-    private var header: some View {
-        VStack{
-            RecapHeaderView {}
-            HStack {
-                Button {
-                    route.pop()
-                    route.push(.home(.main))
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.glass)
-                .clipShape(Circle())
-
-                HStack {
-                    Button {} label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 20))
-                    }
-                    .clipShape(Circle())
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.leading, 10)
-
-                    TextField("Search", text: .constant(""))
-                        .padding(.trailing, 10)
-                        .textFieldStyle(.plain)
-                }
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .background(Color(nsColor: .quaternaryLabelColor))
-                .cornerRadius(100)
-
-                Spacer()
-            }
-        }
-    }
-
-    private var list: some View {
-        let groups = viewModel.grouped(sessions)
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(groups, id: \.date) { group in
-                VStack(alignment: .leading) {
-                    Text(group.date)
-                        .font(.title2.bold())
-                        .padding(.bottom, 4)
-
-                    ForEach(group.sessions) { session in
-                        SessionRow(session: session, historyToDetail: $historyToDetail)
-                    }
-                }
-                .padding(16)
-            }
+    private var filtered: [HistoryModel] {
+        guard !searchText.isEmpty else { return sessions }
+        return sessions.filter {
+            $0.sesTitle.localizedCaseInsensitiveContains(searchText) ||
+            $0.sesKeynote.localizedCaseInsensitiveContains(searchText)
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading) {
-            header
-            ScrollView {
-                list
+        VStack(alignment: .leading, spacing: 0) {
+            RecapHeaderView()
+                .padding(.horizontal, AppSpacing.xl)
+
+            navigationBar
+                .padding(.horizontal, AppSpacing.xl)
+                .padding(.top, AppSpacing.md)
+
+            ScrollView(.vertical, showsIndicators: false) {
+                sessionList
+                    .padding(.horizontal, AppSpacing.xl)
+                    .padding(.top, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.xl)
             }
-            Spacer()
         }
-        .padding(24)
         .navigationTitle("Tiempo")
         .navigationBarBackButtonHidden()
     }
-}
 
-struct SessionRow: View {
-    @EnvironmentObject private var route: AppRouter
-    let session: HistoryModel
-    @Binding var historyToDetail: Bool
+    // MARK: - Navigation bar
 
-    var body: some View {
-        HStack {
-            VStack {
-                Image(systemName: "text.document")
-                    .font(.system(size: 22))
-                    .padding(.trailing, 26)
-                    .padding(.bottom, 13)
+    private var navigationBar: some View {
+        HStack(spacing: AppSpacing.md) {
+            IconCircleButton(systemName: "chevron.left") {
+                route.replace(with: .home(.main))
             }
+            SearchField(text: $searchText)
+        }
+    }
 
-            VStack {
-                HStack {
-                    Text(session.sesTitle)
-                        .font(.title2)
-                    Spacer()
-                    Text(session.time)
-                        .font(.title2)
-                    Button {
-                        route.pop()
-                            route.push(.recap(.fromHistory(session.toRecapModel())))
-                        } label: {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 22))
-                        }
-                    .cornerRadius(100)
-                    .buttonStyle(.plain)
-                    .padding(.leading, 10)
+    // MARK: - List
+
+    @ViewBuilder
+    private var sessionList: some View {
+        let groups = viewModel.grouped(filtered)
+        if groups.isEmpty {
+            emptyState
+        } else {
+            VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                ForEach(groups, id: \.date) { group in
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text(group.date)
+                            .font(AppFont.recapSectionTitle)
+                            .foregroundStyle(AppColor.textPrimary)
+
+                        sessionCard(group.sessions)
+                    }
                 }
-                .padding(.bottom, 10)
-
-                Divider()
             }
         }
-        .padding(.leading, 30)
-        .padding(.top, 16)
+    }
+
+    private func sessionCard(_ sessions: [HistoryModel]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(sessions.enumerated()), id: \.element.persistentModelID) { index, session in
+                SessionRow(session: session) {
+                    route.replace(with: .recap(.fromHistory(session.toRecapModel())))
+                }
+                if index < sessions.count - 1 {
+                    Divider().padding(.horizontal, AppSpacing.lg)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    private var emptyState: some View {
+        Text(searchText.isEmpty ? "No sessions yet." : "No results for \"\(searchText)\".")
+            .font(AppFont.recapRow)
+            .foregroundStyle(AppColor.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, AppSpacing.xxl)
+    }
+}
+
+private struct SessionRow: View {
+    let session: HistoryModel
+    let onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: AppSpacing.md) {
+                Image(systemName: "text.document")
+                    .font(AppFont.sizeIcon)
+                    .foregroundStyle(AppColor.iconSecondary)
+
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                    Text(session.sesTitle)
+                        .font(AppFont.recapRow)
+                        .foregroundStyle(AppColor.textPrimary)
+                        .lineLimit(1)
+
+                    Text(SessionFormatting.sessionTime(session.createdAt))
+                        .font(AppFont.recapMeta)
+                        .foregroundStyle(AppColor.textSecondary)
+                }
+
+                Spacer(minLength: AppSpacing.sm)
+
+                Image(systemName: "chevron.right")
+                    .font(AppFont.smallIcon)
+                    .foregroundStyle(AppColor.iconSecondary)
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
     HistoryView(viewModel: HistoryViewModel())
+        .environmentObject(AppRouter())
 }

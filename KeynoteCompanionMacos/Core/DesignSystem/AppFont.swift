@@ -27,6 +27,19 @@ enum AppFont {
     static let settingDescription = Font.system(size: 15, weight: .regular, design: .default)
     static let sizeIcon = Font.system(size: 22, weight: .regular, design: .default)
 
+    // Recap
+    static let recapTitle = Font.system(size: 28, weight: .bold, design: .default)
+    static let recapSubtitle = Font.system(size: 15, weight: .medium, design: .default)
+    static let recapMeta = Font.system(size: 13, weight: .regular, design: .default)
+    static let recapSectionTitle = Font.system(size: 22, weight: .bold, design: .default)
+    static let recapCardTitle = Font.system(size: 15, weight: .semibold, design: .default)
+    static let recapCardTip = Font.system(size: 12, weight: .regular, design: .default)
+    static let recapRow = Font.system(size: 15, weight: .regular, design: .default)
+    static let recapRowStatus = Font.system(size: 14, weight: .semibold, design: .default)
+    static let recapRowValue = Font.system(size: 14, weight: .regular, design: .default)
+    static let recapPlayerTime = Font.system(size: 11, weight: .regular, design: .default).monospacedDigit()
+
+    // onboarding font
     static let onboardingLogo = Font.system(size: 27, weight: .semibold, design: .default)
     static let onboardingTitle = Font.system(size: 22, weight: .bold, design: .default)
     static let onboardingSubtitle = Font.system(size: 16, weight: .regular, design: .default)

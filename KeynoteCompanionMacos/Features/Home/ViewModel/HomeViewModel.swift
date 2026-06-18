@@ -11,6 +11,7 @@ import Foundation
 final class HomeViewModel: ObservableObject {
     @Published var state: HomeViewState
     @Published var errorMessage: String?
+    @Published var isShowingPermissions = false
 
     private(set) var sessionStatus: HomeSessionStatus = .permissionMissing
     private(set) var currentDocumentName: String = ""
@@ -20,10 +21,14 @@ final class HomeViewModel: ObservableObject {
     private let speechPermissionService: SpeechRecognitionPermissionChecking
     private let keynoteStatusService: KeynoteStatusChecking
     private let keynoteFileOpener: KeynoteFileOpening
+    private let slideshowStarter: KeynoteSlideshowStarting
+    private let automationStatusStore: KeynoteAutomationStatusStoring
     private let pollingIntervalNanoseconds: UInt64
 
     private var openFileTask: Task<Void, Never>?
     private var openFileRequestID: UUID?
+    private var startSlideshowTask: Task<Void, Never>?
+    private var startSlideshowRequestID: UUID?
 
     convenience init(state: HomeViewState = .permissionMissing) {
         let appResolver = KeynoteAppResolver()
@@ -36,6 +41,8 @@ final class HomeViewModel: ObservableObject {
             speechPermissionService: SpeechRecognitionPermissionService(),
             keynoteStatusService: KeynoteStatusService(appResolver: appResolver),
             keynoteFileOpener: KeynoteFileOpener(appResolver: appResolver),
+            slideshowStarter: KeynoteSlideshowStartService(appResolver: appResolver),
+            automationStatusStore: UserDefaultsKeynoteAutomationStatusStore(),
             pollingIntervalNanoseconds: 1_000_000_000
         )
     }
@@ -47,6 +54,9 @@ final class HomeViewModel: ObservableObject {
         speechPermissionService: SpeechRecognitionPermissionChecking,
         keynoteStatusService: KeynoteStatusChecking,
         keynoteFileOpener: KeynoteFileOpening,
+        slideshowStarter: KeynoteSlideshowStarting = KeynoteSlideshowStartService(),
+        automationStatusStore: KeynoteAutomationStatusStoring =
+            UserDefaultsKeynoteAutomationStatusStore(),
         pollingIntervalNanoseconds: UInt64 = 1_000_000_000
     ) {
         self.state = state
@@ -55,11 +65,14 @@ final class HomeViewModel: ObservableObject {
         self.speechPermissionService = speechPermissionService
         self.keynoteStatusService = keynoteStatusService
         self.keynoteFileOpener = keynoteFileOpener
+        self.slideshowStarter = slideshowStarter
+        self.automationStatusStore = automationStatusStore
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
     }
 
     deinit {
         openFileTask?.cancel()
+        startSlideshowTask?.cancel()
     }
 
     func observeSession() async {
@@ -74,13 +87,11 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func showHelp() {}
-
-    func openSettings() {}
+    func openPermissions() {
+        isShowingPermissions = true
+    }
 
     func showActivities() {}
-    
-    func showRecap() {}
 
     func openKeynoteFile() {
         openFileTask?.cancel()
@@ -91,7 +102,14 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func recordPractice() {}
+    func startSlideshow() {
+        startSlideshowTask?.cancel()
+        let requestID = UUID()
+        startSlideshowRequestID = requestID
+        startSlideshowTask = Task { [weak self] in
+            await self?.startSelectedSlideshow(requestID: requestID)
+        }
+    }
 
     func refreshSessionStatus() async {
         guard microphonePermissionService.authorizationStatus() == .authorized else {
@@ -114,8 +132,14 @@ final class HomeViewModel: ObservableObject {
 
         switch automationStatus {
         case .authorized:
-            break
-        case .notDetermined, .denied:
+            // Determinable read — keep the cache in sync with System Settings.
+            automationStatusStore.update(.authorized)
+        case .notDetermined:
+            automationStatusStore.update(.notDetermined)
+            apply(.permissionMissing)
+            return
+        case .denied:
+            automationStatusStore.update(.denied)
             apply(.permissionMissing)
             return
         case .keynoteUnavailable:
@@ -125,7 +149,14 @@ final class HomeViewModel: ObservableObject {
             )
             return
         case .targetNotRunning:
-            apply(.noKeynoteDocument)
+            // Status is undeterminable while Keynote is closed. Fall back to the last
+            // System-Settings-synced value so a not-yet-granted permission still gates,
+            // but a merely-closed Keynote (previously authorized) does not.
+            if automationStatusStore.lastKnownStatus == .authorized {
+                apply(.noKeynoteDocument)
+            } else {
+                apply(.permissionMissing)
+            }
             return
         case .error(let status):
             apply(
@@ -203,6 +234,50 @@ final class HomeViewModel: ObservableObject {
                 .openFileFailed,
                 errorMessage: error.localizedDescription
             )
+        }
+    }
+
+    func startSelectedSlideshow() async {
+        await startSelectedSlideshow(requestID: nil)
+    }
+
+    private func startSelectedSlideshow(requestID: UUID?) async {
+        defer {
+            clearStartSlideshowTaskIfCurrent(requestID: requestID)
+        }
+
+        do {
+            try await slideshowStarter.startSlideshow()
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            // Reflect the new playing state immediately; the poll loop is the backup.
+            await refreshSessionStatus()
+        } catch is CancellationError {
+            return
+        } catch KeynoteStatusError.keynoteUnavailable {
+            apply(
+                .keynoteUnavailable,
+                errorMessage: "Keynote is not installed on this Mac."
+            )
+        } catch {
+            apply(
+                .startSlideshowFailed,
+                errorMessage: error.localizedDescription
+            )
+        }
+    }
+
+    private func clearStartSlideshowTaskIfCurrent(requestID: UUID?) {
+        guard let requestID else {
+            return
+        }
+
+        if startSlideshowRequestID == requestID {
+            startSlideshowTask = nil
+            startSlideshowRequestID = nil
         }
     }
 

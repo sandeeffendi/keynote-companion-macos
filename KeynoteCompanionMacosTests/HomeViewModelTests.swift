@@ -191,7 +191,10 @@ final class HomeViewModelTests: XCTestCase {
         speechStatus: PermissionStatus = .authorized,
         keynoteStatuses: [KeynoteRuntimeStatus],
         didOpenFile: Bool = true,
-        fileOpenResult: MockKeynoteFileOpenResult? = nil
+        fileOpenResult: MockKeynoteFileOpenResult? = nil,
+        startSlideshowShouldThrow: Bool = false,
+        automationStore: MockKeynoteAutomationStatusStore =
+            MockKeynoteAutomationStatusStore(initial: .authorized)
     ) -> HomeViewModel {
         HomeViewModel(
             state: initialState,
@@ -210,8 +213,104 @@ final class HomeViewModelTests: XCTestCase {
             keynoteFileOpener: MockKeynoteFileOpener(
                 result: fileOpenResult ?? .success(didOpenFile)
             ),
+            slideshowStarter: MockKeynoteSlideshowStarter(
+                shouldThrow: startSlideshowShouldThrow
+            ),
+            automationStatusStore: automationStore,
             pollingIntervalNanoseconds: 1_000
         )
+    }
+
+    func testStartSlideshowSuccessTransitionsToActive() async {
+        let viewModel = makeViewModel(
+            initialState: .noKeynoteSlideshowActive,
+            keynoteStatuses: [
+                KeynoteRuntimeStatus(hasOpenDocuments: true, isPlaying: true, documentName: "Deck")
+            ]
+        )
+
+        await viewModel.startSelectedSlideshow()
+
+        XCTAssertEqual(viewModel.state, .keynoteSlideshowActive)
+        XCTAssertEqual(viewModel.sessionStatus, .keynoteSlideshowActive)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testStartSlideshowFailureShowsErrorAndPreservesState() async {
+        let viewModel = makeViewModel(
+            initialState: .noKeynoteSlideshowActive,
+            keynoteStatuses: [],
+            startSlideshowShouldThrow: true
+        )
+
+        await viewModel.startSelectedSlideshow()
+
+        XCTAssertEqual(viewModel.state, .noKeynoteSlideshowActive)
+        XCTAssertEqual(viewModel.sessionStatus, .startSlideshowFailed)
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    func testTargetNotRunningWithUnauthorizedCacheShowsPermissionMissing() async {
+        for cached in [PermissionStatus.notDetermined, .denied] {
+            let viewModel = makeViewModel(
+                automationStatus: .targetNotRunning,
+                keynoteStatuses: [],
+                automationStore: MockKeynoteAutomationStatusStore(initial: cached)
+            )
+
+            await viewModel.refreshSessionStatus()
+
+            XCTAssertEqual(
+                viewModel.state, .permissionMissing,
+                "cached \(cached) should gate to permissionMissing"
+            )
+        }
+    }
+
+    func testAuthorizedAutomationSyncsCacheToAuthorized() async {
+        let store = MockKeynoteAutomationStatusStore(initial: .notDetermined)
+        let viewModel = makeViewModel(
+            automationStatus: .authorized,
+            keynoteStatuses: [
+                KeynoteRuntimeStatus(hasOpenDocuments: false, isPlaying: false, documentName: "")
+            ],
+            automationStore: store
+        )
+
+        await viewModel.refreshSessionStatus()
+
+        XCTAssertEqual(store.lastKnownStatus, .authorized)
+    }
+
+    func testDeniedAutomationSyncsCacheAndGates() async {
+        let store = MockKeynoteAutomationStatusStore(initial: .authorized)
+        let viewModel = makeViewModel(
+            automationStatus: .denied,
+            keynoteStatuses: [],
+            automationStore: store
+        )
+
+        await viewModel.refreshSessionStatus()
+
+        XCTAssertEqual(store.lastKnownStatus, .denied)
+        XCTAssertEqual(viewModel.state, .permissionMissing)
+    }
+}
+
+final class MockKeynoteAutomationStatusStore: KeynoteAutomationStatusStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var status: PermissionStatus
+
+    init(initial: PermissionStatus = .notDetermined) {
+        self.status = initial
+    }
+
+    var lastKnownStatus: PermissionStatus {
+        lock.withLock { status }
+    }
+
+    func update(_ status: PermissionStatus) {
+        lock.withLock { self.status = status }
     }
 }
 
@@ -275,6 +374,16 @@ private struct MockKeynoteFileOpener: KeynoteFileOpening {
             return didOpenFile
         case .cancellation:
             throw CancellationError()
+        }
+    }
+}
+
+private struct MockKeynoteSlideshowStarter: KeynoteSlideshowStarting {
+    let shouldThrow: Bool
+
+    func startSlideshow() async throws {
+        if shouldThrow {
+            throw KeynoteStatusError.appleScriptFailed("mock start failure")
         }
     }
 }
