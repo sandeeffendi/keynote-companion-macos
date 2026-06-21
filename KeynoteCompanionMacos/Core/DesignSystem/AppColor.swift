@@ -24,7 +24,6 @@ enum AppColor {
     static let controlTextDisabled = Color(nsColor: .disabledControlTextColor)
     static let controlAccent = Color(nsColor: .systemBlue)
     static let onControlAccent = Color(light: .white, dark: .white)
-    static let destructive = Color(nsColor: .systemRed)
 
     // aditional color
     static let borderSubtle = Color(
@@ -49,17 +48,6 @@ enum AppColor {
     static let wpmSlow = Color(nsColor: .systemYellow)  // < 90 WPM
     static let wpmGood = Color(nsColor: .systemGreen)  // 90–120 WPM
     static let wpmFast = Color(nsColor: .systemRed)  // > 120 WPM
-}
-
-extension Color {
-    init(light: NSColor, dark: NSColor) {
-        self.init(
-            nsColor: NSColor(name: nil) { appearance in
-                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                    ? dark : light
-            }
-        )
-    }
 }
 
 extension Color {

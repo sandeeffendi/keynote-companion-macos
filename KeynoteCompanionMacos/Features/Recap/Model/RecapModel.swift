@@ -115,22 +115,3 @@ struct Slide: Codable, Hashable, Sendable {
         attempts  = (try? c.decode([SlideAttempt].self,  forKey: .attempts)) ?? []
     }
 }
-
-struct Feedback: Hashable {
-    let title: String
-    let overall: Int
-    let unit: String
-    let tips: String
-    let subTitle: String
-    let category: String
-    let perSlide: [Slide]
-}
-
-struct Slide: Codable, Hashable {
-    let no: Int
-    let value: Int
-    let timestamp: TimeInterval
-}
-
-
-

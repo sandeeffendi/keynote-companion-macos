@@ -64,6 +64,7 @@ struct RecapView: View {
         }
     }
 
+    // MARK: - Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -339,7 +340,7 @@ struct RecapView: View {
         .frame(height: 20)
     }
 
-    // Footer
+    // MARK: - Footer
 
     private var footer: some View {
         HStack {

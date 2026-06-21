@@ -7,10 +7,6 @@ import AVFoundation
 import AppKit
 import Combine
 import Foundation
-import AVFoundation
-import AppKit
-import Combine
-import Foundation
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
@@ -168,111 +164,6 @@ final class SettingsViewModel: ObservableObject {
         }
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func startAutomationRefresh(promptIfNeeded: Bool) {
-        automationRefreshTask?.cancel()
-        let requestID = UUID()
-        automationRefreshRequestID = requestID
-        automationRefreshTask = Task { [weak self] in
-            await self?.refreshKeynoteAutomationStatus(
-                promptIfNeeded: promptIfNeeded,
-                requestID: requestID
-            )
-        }
-    }
-
-    private func refreshKeynoteAutomationStatus(
-        promptIfNeeded: Bool,
-        requestID: UUID
-    ) async {
-        defer {
-            clearAutomationRefreshTaskIfCurrent(requestID: requestID)
-        }
-
-        let status = await automationPermissionService.authorizationStatus(
-            promptIfNeeded: promptIfNeeded
-        )
-
-        guard !Task.isCancelled else {
-            return
-        }
-
-        switch status {
-        case .targetNotRunning, .keynoteUnavailable:
-            // Keynote merely being closed must not downgrade an authorized permission;
-            // keep the last-known status instead of reporting denied.
-            return
-        default:
-            updatePermissionStatus(
-                mapAutomationStatus(status),
-                for: .keynoteAutomation
-            )
-        }
-    }
-
-    private func clearAutomationRefreshTaskIfCurrent(requestID: UUID) {
-        if automationRefreshRequestID == requestID {
-            automationRefreshTask = nil
-            automationRefreshRequestID = nil
-        }
-    }
-
-    private func mapAutomationStatus(
-        _ status: KeynoteAutomationPermissionState
-    ) -> PermissionStatus {
-        switch status {
-        case .authorized:
-            return .authorized
-        case .notDetermined:
-            return .notDetermined
-        case .denied, .keynoteUnavailable, .targetNotRunning, .error:
-            return .denied
-        }
-    }
-
-    private func updatePermissionStatus(
-        _ status: PermissionStatus,
-        for type: PermissionType
-    ) {
-        guard
-            let index = settingsData.permissionItems.firstIndex(
-                where: { $0.permissionType == type }
-            )
-        else {
-            return
-        }
-
-        settingsData.permissionItems[index].status = status
-        settingsData.permissionItems[index].isEnabled = (status == .authorized)
-    }
-
-    private func storedStatus(for type: PermissionType) -> PermissionStatus {
-        settingsData.permissionItems.first {
-            $0.permissionType == type
-        }?.status ?? .notDetermined
-    }
-
-    private func toggleKeynoteAutomationPermission(newValue: Bool) {
-        let status = storedStatus(for: .keynoteAutomation)
-
-        if newValue {
-            switch status {
-            case .notDetermined:
-                startAutomationRefresh(promptIfNeeded: true)
-            case .denied:
-                setPermissionEnabled(false, for: .keynoteAutomation)
-                openSystemSettings(for: .keynoteAutomation)
-            case .authorized:
-                setPermissionEnabled(true, for: .keynoteAutomation)
-            }
-        } else {
-            setPermissionEnabled(status == .authorized, for: .keynoteAutomation)
-
-            if status == .authorized {
-                openSystemSettings(for: .keynoteAutomation)
-            }
         }
     }
 
