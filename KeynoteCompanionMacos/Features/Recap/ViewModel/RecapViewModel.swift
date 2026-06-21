@@ -248,6 +248,19 @@ final class RecapViewModel: ObservableObject {
         RecapSlideAnalysis.status(for: wpm, lowerBand: Self.wpmLowerBand, upperBand: Self.wpmUpperBand)
     }
 
+    // MARK: - Filler words
+
+    /// The "Filler Words" feedback, if this session has one. Mirrors how the WPM card
+    /// looks up its feedback by `category`.
+    var fillerFeedback: Feedback? {
+        recapData.feedback.first(where: { $0.category == "Filler Words" })
+    }
+
+    /// Per-slide filler counts (`Slide.value` = count) in slide order.
+    var fillerSlides: [Slide] {
+        (fillerFeedback?.perSlide ?? []).sorted { $0.no < $1.no }
+    }
+
     // MARK: - Private
 
     private func startProgressTimer() {

@@ -3,6 +3,7 @@
 //  KeynoteCompanionMacos
 //
 
+import Accelerate
 import AVFoundation
 import Foundation
 import os
@@ -13,6 +14,10 @@ private let log = Logger(subsystem: "com.tiempo.practice", category: "Audio")
 protocol AudioCapturing: Sendable {
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws
     func updateSpeechRequest(_ request: SFSpeechAudioBufferRecognitionRequest) async
+    /// A stream of per-buffer RMS audio levels (0…1) tapped from the SAME engine that
+    /// feeds the recognizer and the file — a third fan-out, no second engine. Drives
+    /// on-device silent-pause detection. Finishes when capture stops.
+    func audioLevels() async -> AsyncStream<Float>
     func pause() async
     func resume() async throws
     func stop() async -> URL?
@@ -41,6 +46,34 @@ private nonisolated final class SpeechRequestBox: @unchecked Sendable {
     }
 }
 
+/// Holds the audio-levels stream continuation so the real-time tap thread can yield
+/// RMS samples while the actor sets/finishes it. Same lock-guarded handoff pattern as
+/// `SpeechRequestBox`: writes happen-before tap reads via install/remove ordering.
+private nonisolated final class AudioLevelBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: AsyncStream<Float>.Continuation?
+
+    func set(_ continuation: AsyncStream<Float>.Continuation?) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.continuation?.finish()
+        self.continuation = continuation
+    }
+
+    func yield(_ level: Float) {
+        lock.lock()
+        defer { lock.unlock() }
+        continuation?.yield(level)
+    }
+
+    func finish() {
+        lock.lock()
+        defer { lock.unlock() }
+        continuation?.finish()
+        continuation = nil
+    }
+}
+
 actor AudioCaptureService: AudioCapturing {
     // nonisolated(unsafe) because these are read from the audio tap thread, which
     // runs outside actor isolation. The tap is installed/removed while actor-isolated,
@@ -49,6 +82,7 @@ actor AudioCaptureService: AudioCapturing {
     nonisolated(unsafe) private var audioFile: AVAudioFile?
 
     private let requestBox = SpeechRequestBox()
+    private let levelBox = AudioLevelBox()
     private var recordingURL: URL?
 
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws {
@@ -68,6 +102,7 @@ actor AudioCaptureService: AudioCapturing {
         log.info("Starting capture: sampleRate=\(recordingFormat.sampleRate) channels=\(recordingFormat.channelCount)")
 
         let box = requestBox
+        let levels = levelBox
         let firstBufferLogged = OSAllocatedUnfairLock(initialState: false)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             let shouldLog = firstBufferLogged.withLock { logged -> Bool in
@@ -79,6 +114,14 @@ actor AudioCaptureService: AudioCapturing {
             }
             box.get()?.append(buffer)
             try? file.write(from: buffer)
+
+            // Third fan-out: cheap per-buffer RMS for on-device silence detection.
+            if let channel = buffer.floatChannelData, buffer.frameLength > 0 {
+                let rms = vDSP.rootMeanSquare(
+                    UnsafeBufferPointer(start: channel[0], count: Int(buffer.frameLength))
+                )
+                levels.yield(rms)
+            }
         }
 
         eng.prepare()
@@ -89,6 +132,15 @@ actor AudioCaptureService: AudioCapturing {
         let old = requestBox.swap(request)
         old?.endAudio()
         log.info("Speech request swapped (previous alive=\(old != nil))")
+    }
+
+    func audioLevels() -> AsyncStream<Float> {
+        let (stream, continuation) = AsyncStream.makeStream(
+            of: Float.self,
+            bufferingPolicy: .bufferingNewest(64)
+        )
+        levelBox.set(continuation)
+        return stream
     }
 
     func pause() async {
@@ -106,6 +158,7 @@ actor AudioCaptureService: AudioCapturing {
         audioFile = nil
         let old = requestBox.swap(nil)
         old?.endAudio()
+        levelBox.finish()
         return recordingURL
     }
 

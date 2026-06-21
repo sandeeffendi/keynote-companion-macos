@@ -25,6 +25,15 @@ actor PracticeRecordingCoordinator {
     // not FIFO) and immune to partial-result shrink. Reset on task rotation.
     private var maxCountCurrentTask: Int = 0
 
+    // Parallel filler timeline (silent pauses + lexical fillers), bucketed into the
+    // SAME slideIntervals as words and surfaced as a second recap Feedback. Never pruned.
+    private var fillerEvents: [FillerEvent] = []
+    private var silenceDetector = SilenceDetector()
+    // High-water mark of transcript tokens already scanned for lexical fillers in the
+    // CURRENT task; reset on rotation (like maxCountCurrentTask) so the recognizer's
+    // cumulative transcript isn't re-counted.
+    private var processedTokenCount: Int = 0
+
     private var clock: MediaClock
     private var wpmCalculator: WPMCalculator
 
@@ -43,6 +52,7 @@ actor PracticeRecordingCoordinator {
 
     private var recognitionSupervisorTask: Task<Void, Never>?
     private var slidePollingTask: Task<Void, Never>?
+    private var fillerLevelsTask: Task<Void, Never>?
     private var stateContinuation: AsyncStream<PracticeSessionState>.Continuation?
 
     /// One recognition task's lifecycle, delivered in order to a single consumer so
@@ -50,6 +60,7 @@ actor PracticeRecordingCoordinator {
     /// leak a late word into the next one.
     private enum RecognitionEvent: Sendable {
         case words(Int)
+        case transcript(String)
         case ended(error: Bool)
     }
 
@@ -77,7 +88,8 @@ actor PracticeRecordingCoordinator {
         wpmCalculator: WPMCalculator = WPMCalculator(
             window: PracticeTuning.windowSeconds,
             smoothingFactor: PracticeTuning.emaAlpha
-        )
+        ),
+        silenceDetector: SilenceDetector = SilenceDetector()
     ) {
         self.audioService = audioService
         self.speechService = speechService
@@ -85,6 +97,7 @@ actor PracticeRecordingCoordinator {
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
         self.clock = clock
         self.wpmCalculator = wpmCalculator
+        self.silenceDetector = silenceDetector
     }
 
     var stateStream: AsyncStream<PracticeSessionState> {
@@ -103,6 +116,7 @@ actor PracticeRecordingCoordinator {
         lastProgressMedia = 0
         recognitionHealth = .live
         slideIntervals = []
+        resetFillerState()
 
         // Detect initial slide
         let initialSlide: Int
@@ -119,6 +133,10 @@ actor PracticeRecordingCoordinator {
         activeRequest = request
 
         try await audioService.start(speechRequest: request)
+
+        // Silent-pause detection rides on raw audio energy, so start it before the
+        // speech-auth check — pauses still register even if recognition is unavailable.
+        await startAudioLevelMonitoring()
 
         // Lazy safety-net: ensure speech recognition is authorized before starting.
         let speechStatus = await speechService.requestAuthorization()
@@ -166,6 +184,8 @@ actor PracticeRecordingCoordinator {
         recognitionSupervisorTask = nil
         slidePollingTask?.cancel()
         slidePollingTask = nil
+        fillerLevelsTask?.cancel()
+        fillerLevelsTask = nil
 
         await speechService.stopRecognition()
         let audioURL = await audioService.stop()
@@ -179,7 +199,8 @@ actor PracticeRecordingCoordinator {
             slideIntervals: slideIntervals,
             duration: duration,
             audioFileURL: audioURL,
-            keynoteFileName: keynoteFileName
+            keynoteFileName: keynoteFileName,
+            fillerEvents: fillerEvents
         )
 
         emit(.finished(result))
@@ -284,12 +305,14 @@ actor PracticeRecordingCoordinator {
     /// task's cumulative count starts from zero.
     private func armRecognition(request: SFSpeechAudioBufferRecognitionRequest) async -> AsyncStream<RecognitionEvent>? {
         maxCountCurrentTask = 0
+        processedTokenCount = 0
         lastProgressMedia = clock.now()
         let (events, continuation) = AsyncStream<RecognitionEvent>.makeStream()
         do {
             try await speechService.startRecognition(
                 request: request,
                 onWordCount: { continuation.yield(.words($0)) },
+                onTranscript: { continuation.yield(.transcript($0)) },
                 onTaskEnded: { continuation.yield(.ended(error: $0)); continuation.finish() }
             )
             recognitionHealth = .live
@@ -312,6 +335,8 @@ actor PracticeRecordingCoordinator {
                     switch event {
                     case .words(let count):
                         await self?.handleWordCountUpdate(count)
+                    case .transcript(let text):
+                        await self?.handleTranscript(text)
                     case .ended(let error):
                         return error ? .endedWithError : .endedNormally
                     }
@@ -351,6 +376,57 @@ actor PracticeRecordingCoordinator {
         lastProgressMedia = now
         history.append(contentsOf: Array(repeating: now, count: newWords))
         log.debug("Word count update: \(count) (+\(newWords) at \(now, format: .fixed(precision: 2)))")
+    }
+
+    /// Scan the recognizer's (cumulative) transcript for lexical fillers. Only the
+    /// tokens past `processedTokenCount` are inspected, so re-emitted partial results
+    /// can't double-count; a shrinking partial is ignored (high-water never lowers).
+    /// Sync so the array mutation has no suspension between read and write.
+    private func handleTranscript(_ transcript: String) {
+        guard isSessionActive else { return }
+        let tokens = FillerLexicon.tokenize(transcript)
+        guard tokens.count > processedTokenCount else { return }
+        let matches = FillerLexicon.detect(tokens: tokens, newStart: processedTokenCount)
+        processedTokenCount = tokens.count
+        guard !matches.isEmpty else { return }
+        let now = clock.now()
+        for token in matches {
+            fillerEvents.append(FillerEvent(time: now, kind: .lexical(token: token)))
+        }
+        log.debug("Lexical fillers +\(matches.count) at \(now, format: .fixed(precision: 2)): \(matches.joined(separator: ","), privacy: .private)")
+    }
+
+    /// Feed one RMS sample to the silence detector and record any completed pause.
+    /// Sync (mutates the value-type detector) and gated on pause so a frozen clock
+    /// can't inflate a pause duration. Driven by the audio-levels stream.
+    private func ingestAudioLevel(_ level: Float) {
+        guard isSessionActive, !clock.isPaused else { return }
+        if let event = silenceDetector.ingest(level: level, now: clock.now()) {
+            fillerEvents.append(event)
+            if case .silentPause(let duration) = event.kind {
+                log.debug("Silent pause \(duration, format: .fixed(precision: 2))s ending at \(event.time, format: .fixed(precision: 2))")
+            }
+        }
+    }
+
+    /// Drains the audio-levels stream into the silence detector for the whole session.
+    /// The stream finishes when capture stops, ending the loop.
+    private func startAudioLevelMonitoring() async {
+        let stream = await audioService.audioLevels()
+        fillerLevelsTask = Task { [weak self] in
+            for await level in stream {
+                if Task.isCancelled { break }
+                await self?.ingestAudioLevel(level)
+            }
+        }
+    }
+
+    /// Clears the filler timeline + detector for a fresh session (sync: the detector
+    /// is a value type, mutated outside any async suspension).
+    private func resetFillerState() {
+        fillerEvents = []
+        silenceDetector.reset()
+        processedTokenCount = 0
     }
 
     private func startSlidePolling() {
