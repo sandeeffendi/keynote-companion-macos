@@ -234,17 +234,50 @@ final class PracticeRecordingCoordinatorTests: XCTestCase {
         )
 
         try await coordinator.start(keynoteFileName: "Test.key")
-        await audio.simulateAudioLevel(0.2)                 // speaking at now=0
+        // Each sample carries its capture host-time (test-clock domain); the coordinator
+        // maps it to media time, so the pause spans media 1 → 3 regardless of when the
+        // actor happens to process the sample.
+        await audio.simulateAudioLevel(0.2, at: 0)          // speaking at media 0
         try await Task.sleep(nanoseconds: 100_000_000)
         wall.advance(to: 1)
-        await audio.simulateAudioLevel(0.001)               // silence begins at now=1
+        await audio.simulateAudioLevel(0.001, at: 1)        // silence begins at media 1
         try await Task.sleep(nanoseconds: 100_000_000)
         wall.advance(to: 3)
-        await audio.simulateAudioLevel(0.2)                 // resume at now=3 → 2s pause
+        await audio.simulateAudioLevel(0.2, at: 3)          // resume at media 3 → 2s pause
         try await Task.sleep(nanoseconds: 150_000_000)
 
         let result = await coordinator.stop()
         XCTAssertEqual(result.fillerEvents.filter(\.isSilentPause).count, 1)
+    }
+
+    func testFilledPauseFromAudioLevelsProducesFillerEvent() async throws {
+        let wall = TestWall()
+        let audio = MockAudioCaptureService()
+        // Deterministic filled-pause detector: 0.5s of steady voiced energy, tiny window.
+        let filled = FilledPauseDetector(config: .init(
+            minSeconds: 0.5, minLevel: 0.1, maxVariation: 0.5, windowSamples: 3
+        ))
+        let coordinator = PracticeRecordingCoordinator(
+            audioService: audio,
+            speechService: MockSpeechRecognitionService(),
+            slideService: MockSlideTrackingService(),
+            pollingIntervalNanoseconds: 10_000_000_000,
+            clock: MediaClock(wallNow: wall.source()),
+            wpmCalculator: WPMCalculator(smoothingFactor: 0),
+            filledPauseDetector: filled
+        )
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        // Steady voiced energy held for 0.6s with no recognized words → a "eeee".
+        await audio.simulateAudioLevel(0.3, at: 0.0)
+        await audio.simulateAudioLevel(0.3, at: 0.2)
+        await audio.simulateAudioLevel(0.3, at: 0.4)
+        await audio.simulateAudioLevel(0.3, at: 0.6)
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        let result = await coordinator.stop()
+        XCTAssertEqual(result.fillerEvents.filter(\.isFilledPause).count, 1)
+        XCTAssertEqual(result.fillerEvents.filter(\.isSilentPause).count, 0, "Voiced energy is not a silent pause")
     }
 
     private func waitUntil(
@@ -286,7 +319,7 @@ private final class TestWall: @unchecked Sendable {
 private actor MockAudioCaptureService: AudioCapturing {
     private(set) var startCallCount = 0
     private(set) var updatedRequests: [SFSpeechAudioBufferRecognitionRequest] = []
-    private var levelContinuation: AsyncStream<Float>.Continuation?
+    private var levelContinuation: AsyncStream<AudioLevelSample>.Continuation?
 
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws {
         startCallCount += 1
@@ -296,15 +329,16 @@ private actor MockAudioCaptureService: AudioCapturing {
         updatedRequests.append(request)
     }
 
-    func audioLevels() async -> AsyncStream<Float> {
-        let (stream, continuation) = AsyncStream.makeStream(of: Float.self)
+    func audioLevels() async -> AsyncStream<AudioLevelSample> {
+        let (stream, continuation) = AsyncStream.makeStream(of: AudioLevelSample.self)
         levelContinuation = continuation
         return stream
     }
 
-    /// Push one RMS sample into the live audio-levels stream (test driver).
-    func simulateAudioLevel(_ level: Float) {
-        levelContinuation?.yield(level)
+    /// Push one RMS sample (with its capture host-time) into the live audio-levels
+    /// stream (test driver). `hostTime` is in the test clock's wall domain.
+    func simulateAudioLevel(_ rms: Float, at hostTime: TimeInterval) {
+        levelContinuation?.yield(AudioLevelSample(rms: rms, hostTime: hostTime))
     }
 
     func pause() async {}

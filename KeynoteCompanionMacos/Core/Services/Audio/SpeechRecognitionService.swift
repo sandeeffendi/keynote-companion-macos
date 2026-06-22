@@ -58,6 +58,10 @@ actor SpeechRecognitionService: SpeechRecognizing {
         // dictation model asset is missing, which fails with kAFAssistantErrorDomain 1101
         // without ever producing a result. Let the system pick on-device or server.
         request.requiresOnDeviceRecognition = false
+        // Bias the language model toward our word-like fillers so it's less likely to
+        // silently normalise them away (helps "eh/anu/kayak/gitu…"). Pure vocalisations
+        // ("eee/emm") aren't dictionary words and are caught acoustically instead.
+        request.contextualStrings = FillerLexicon.recognizerHints
 
         log.info("Starting recognition: locale=\(recognizer.locale.identifier, privacy: .public) available=\(recognizer.isAvailable) onDeviceSupported=\(recognizer.supportsOnDeviceRecognition)")
 

@@ -10,13 +10,18 @@
 
 import Foundation
 
-/// One detected filler. Two kinds today; `.filledPause` (drawn-out "eeee" detected
-/// acoustically from energy + word-arrival gaps) is reserved for a fast-follow.
+/// One detected filler. Three kinds: a silent gap, a drawn-out voiced hesitation,
+/// and a spoken lexical filler word.
 enum FillerKind: Sendable, Equatable {
     /// A silent gap in speech longer than `FillerTuning.minSilencePauseSeconds`,
     /// detected on-device by `SilenceDetector` from audio energy. `duration` is the
     /// measured length of the gap in media seconds.
     case silentPause(duration: TimeInterval)
+    /// A drawn-out voiced filler ("eeee"/"emmm"/"mmm") that the server recognizer
+    /// drops as a non-word: detected on-device by `FilledPauseDetector` as sustained,
+    /// steady voiced energy with no word progress. `duration` is its length in media
+    /// seconds.
+    case filledPause(duration: TimeInterval)
     /// A spoken filler word matched against `FillerLexicon` (e.g. "kayak", "gitu").
     case lexical(token: String)
 }
@@ -29,6 +34,7 @@ struct FillerEvent: Sendable, Equatable {
     let kind: FillerKind
 
     var isSilentPause: Bool { if case .silentPause = kind { return true }; return false }
+    var isFilledPause: Bool { if case .filledPause = kind { return true }; return false }
     var isLexical: Bool { if case .lexical = kind { return true }; return false }
     var lexicalToken: String? { if case .lexical(let t) = kind { return t }; return nil }
 }
@@ -40,7 +46,7 @@ enum FillerTuning {
 
     /// A silence must last at least this long (media seconds) to count as a pause.
     /// Shorter gaps are normal between-phrase breathing and are ignored.
-    static let minSilencePauseSeconds: TimeInterval = 1.5
+    static let minSilencePauseSeconds: TimeInterval = 0.7 // PROVISIONAL — calibrate
     /// Speech threshold = adaptive noise floor × this factor. Higher = stricter
     /// (only loud speech counts as "talking", so more gaps register as silence).
     static let silenceEnergyFactor: Float = 5.0
@@ -58,10 +64,33 @@ enum FillerTuning {
     /// Starting noise-floor estimate before any audio adapts it.
     static let initialNoiseFloor: Float = 0.005
 
+    // MARK: Filled pause (acoustic "eeee" — sustained voiced energy + word-arrival)
+
+    /// A voiced-but-wordless stretch must last at least this long (media seconds) to
+    /// count as a drawn-out "eeee"/"emmm" filler. Short enough to catch real um's.
+    static let filledPauseMinSeconds: TimeInterval = 0.6 // PROVISIONAL — calibrate
+    /// Minimum RMS for audio to count as "voiced" (the speaker is making sound, not
+    /// silent) when hunting for a filled pause. Sits above the silence threshold.
+    static let filledPauseMinLevel: Float = 0.02 // PROVISIONAL — calibrate
+    /// Max coefficient of variation (stddev ÷ mean) of RMS over the rolling window for
+    /// the sound to count as a STEADY held vowel rather than articulated speech that
+    /// the recognizer simply hasn't transcribed yet (server STT lags ~1–3s). This is
+    /// what stops normal speech onset from registering as a filled pause.
+    static let filledPauseMaxVariation: Float = 0.4 // PROVISIONAL — calibrate
+    /// Number of recent RMS samples used to judge steadiness. Must fill within
+    /// `filledPauseMinSeconds` at the tap's buffer cadence (~43/s).
+    static let filledPauseWindowSamples: Int = 12 // PROVISIONAL — calibrate
+
     // MARK: Recap classification
 
     /// At or below this fillers-per-minute the delivery is considered clean.
     static let idealFillersPerMinute: Double = 3
+
+    // MARK: Calibration instrumentation
+
+    /// Log one per-sample RMS/floor/threshold calibration line every N samples, so the
+    /// `Calibration` log isn't flooded at the tap's ~43 samples/s cadence.
+    static let calibrationLogEverySamples: Int = 15
 }
 
 /// Indonesian filler-word lexicon + matcher. Deliberately CONSERVATIVE for v1:
@@ -80,6 +109,18 @@ enum FillerLexicon {
     /// flagging the very common standalone "apa".
     static let bigrams: Set<String> = [
         "apa ya", "gitu loh", "he eh", "kayak gini", "kayak gitu",
+    ]
+
+    /// Word-like fillers worth biasing the recognizer toward via the request's
+    /// `contextualStrings`, so the server LM is less likely to silently drop them.
+    /// Pure vocalisations ("ee"/"mm"/"hmm") are intentionally omitted — they aren't
+    /// dictionary words, so hinting them does nothing; those are caught acoustically
+    /// by `FilledPauseDetector`. Kept deliberately small (contextualStrings is most
+    /// effective with a short, high-signal list).
+    static let recognizerHints: [String] = [
+        "eh", "anu", "apaan", "kayak", "gitu", "gini",
+        "pokoknya", "maksudnya", "intinya",
+        "apa ya", "gitu loh", "kayak gini", "kayak gitu",
     ]
 
     /// Normalise one raw token: lowercase, strip non-letters, collapse a run of 3+

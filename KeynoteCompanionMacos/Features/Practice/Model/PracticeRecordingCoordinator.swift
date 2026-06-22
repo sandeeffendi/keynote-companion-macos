@@ -8,6 +8,10 @@ import Speech
 import os
 
 private let log = Logger(subsystem: "com.tiempo.practice", category: "Coordinator")
+// Dedicated channel for filler-threshold calibration (RMS / floor / threshold / gaps /
+// filled-pause candidates / raw transcript). Stream with:
+//   log stream --level debug --predicate 'subsystem == "com.tiempo.practice" && category == "Calibration"'
+private let calibrationLog = Logger(subsystem: "com.tiempo.practice", category: "Calibration")
 
 actor PracticeRecordingCoordinator {
     private let audioService: AudioCapturing
@@ -25,10 +29,14 @@ actor PracticeRecordingCoordinator {
     // not FIFO) and immune to partial-result shrink. Reset on task rotation.
     private var maxCountCurrentTask: Int = 0
 
-    // Parallel filler timeline (silent pauses + lexical fillers), bucketed into the
-    // SAME slideIntervals as words and surfaced as a second recap Feedback. Never pruned.
+    // Parallel filler timeline (silent pauses + filled pauses + lexical fillers),
+    // bucketed into the SAME slideIntervals as words and surfaced as a second recap
+    // Feedback. Never pruned.
     private var fillerEvents: [FillerEvent] = []
     private var silenceDetector = SilenceDetector()
+    private var filledPauseDetector = FilledPauseDetector()
+    // Throttle counter for the per-sample calibration log (see FillerTuning).
+    private var calibrationSampleTick: Int = 0
     // High-water mark of transcript tokens already scanned for lexical fillers in the
     // CURRENT task; reset on rotation (like maxCountCurrentTask) so the recognizer's
     // cumulative transcript isn't re-counted.
@@ -89,7 +97,8 @@ actor PracticeRecordingCoordinator {
             window: PracticeTuning.windowSeconds,
             smoothingFactor: PracticeTuning.emaAlpha
         ),
-        silenceDetector: SilenceDetector = SilenceDetector()
+        silenceDetector: SilenceDetector = SilenceDetector(),
+        filledPauseDetector: FilledPauseDetector = FilledPauseDetector()
     ) {
         self.audioService = audioService
         self.speechService = speechService
@@ -98,6 +107,7 @@ actor PracticeRecordingCoordinator {
         self.clock = clock
         self.wpmCalculator = wpmCalculator
         self.silenceDetector = silenceDetector
+        self.filledPauseDetector = filledPauseDetector
     }
 
     var stateStream: AsyncStream<PracticeSessionState> {
@@ -386,6 +396,9 @@ actor PracticeRecordingCoordinator {
         guard isSessionActive else { return }
         let tokens = FillerLexicon.tokenize(transcript)
         guard tokens.count > processedTokenCount else { return }
+        // Calibration: see exactly what the recognizer emits, to judge which fillers it
+        // keeps vs. silently normalises away.
+        calibrationLog.debug("transcript(\(tokens.count) tok): \(transcript, privacy: .private)")
         let matches = FillerLexicon.detect(tokens: tokens, newStart: processedTokenCount)
         processedTokenCount = tokens.count
         guard !matches.isEmpty else { return }
@@ -396,37 +409,71 @@ actor PracticeRecordingCoordinator {
         log.debug("Lexical fillers +\(matches.count) at \(now, format: .fixed(precision: 2)): \(matches.joined(separator: ","), privacy: .private)")
     }
 
-    /// Feed one RMS sample to the silence detector and record any completed pause.
-    /// Sync (mutates the value-type detector) and gated on pause so a frozen clock
-    /// can't inflate a pause duration. Driven by the audio-levels stream.
-    private func ingestAudioLevel(_ level: Float) {
+    /// Feed one captured RMS sample to BOTH the silence and filled-pause detectors and
+    /// record any completed filler. The sample carries its capture host-time, mapped to
+    /// media time here so a pause is measured on the audio timeline rather than at
+    /// actor-processing time. Sync (mutates the value-type detectors) and gated on pause
+    /// so a frozen clock can't inflate a duration. Driven by the audio-levels stream.
+    private func ingestAudioLevel(_ sample: AudioLevelSample) {
         guard isSessionActive, !clock.isPaused else { return }
-        if let event = silenceDetector.ingest(level: level, now: clock.now()) {
+        let now = clock.mediaTime(forWall: sample.hostTime)
+        let level = sample.rms
+
+        if let event = silenceDetector.ingest(level: level, now: now) {
             fillerEvents.append(event)
             if case .silentPause(let duration) = event.kind {
                 log.debug("Silent pause \(duration, format: .fixed(precision: 2))s ending at \(event.time, format: .fixed(precision: 2))")
             }
         }
+
+        // Filled pause ("eeee"): sustained, steady, voiced, with no word progress. The
+        // detector reads how long words have been absent via `lastProgressMedia` (the
+        // same word-arrival clock the watchdog uses); emitting one does NOT rotate
+        // recognition — it stays a parallel, additive signal.
+        let timeSinceLastWord = now - lastProgressMedia
+        if let event = filledPauseDetector.ingest(level: level, now: now, timeSinceLastWord: timeSinceLastWord) {
+            fillerEvents.append(event)
+            if case .filledPause(let duration) = event.kind {
+                log.debug("Filled pause \(duration, format: .fixed(precision: 2))s ending at \(event.time, format: .fixed(precision: 2))")
+            }
+        }
+
+        logCalibrationSample(level: level, timeSinceLastWord: timeSinceLastWord)
     }
 
-    /// Drains the audio-levels stream into the silence detector for the whole session.
+    /// Emit calibration data on the dedicated channel: every completed silence gap
+    /// (including ones too short to count, so the pause threshold can be chosen from the
+    /// real distribution) plus a throttled RMS / floor / threshold snapshot.
+    private func logCalibrationSample(level: Float, timeSinceLastWord: TimeInterval) {
+        if let gap = silenceDetector.lastCompletedGap {
+            calibrationLog.debug("gap=\(gap, format: .fixed(precision: 2))s (min=\(FillerTuning.minSilencePauseSeconds, format: .fixed(precision: 2))) floor=\(self.silenceDetector.currentNoiseFloor, format: .fixed(precision: 4)) thr=\(self.silenceDetector.lastThreshold, format: .fixed(precision: 4))")
+        }
+        calibrationSampleTick &+= 1
+        if calibrationSampleTick % FillerTuning.calibrationLogEverySamples == 0 {
+            calibrationLog.debug("rms=\(level, format: .fixed(precision: 4)) floor=\(self.silenceDetector.currentNoiseFloor, format: .fixed(precision: 4)) thr=\(self.silenceDetector.lastThreshold, format: .fixed(precision: 4)) silent=\(self.silenceDetector.isInSilence) sinceWord=\(timeSinceLastWord, format: .fixed(precision: 2))")
+        }
+    }
+
+    /// Drains the audio-levels stream into the detectors for the whole session.
     /// The stream finishes when capture stops, ending the loop.
     private func startAudioLevelMonitoring() async {
         let stream = await audioService.audioLevels()
         fillerLevelsTask = Task { [weak self] in
-            for await level in stream {
+            for await sample in stream {
                 if Task.isCancelled { break }
-                await self?.ingestAudioLevel(level)
+                await self?.ingestAudioLevel(sample)
             }
         }
     }
 
-    /// Clears the filler timeline + detector for a fresh session (sync: the detector
-    /// is a value type, mutated outside any async suspension).
+    /// Clears the filler timeline + detectors for a fresh session (sync: the detectors
+    /// are value types, mutated outside any async suspension).
     private func resetFillerState() {
         fillerEvents = []
         silenceDetector.reset()
+        filledPauseDetector.reset()
         processedTokenCount = 0
+        calibrationSampleTick = 0
     }
 
     private func startSlidePolling() {

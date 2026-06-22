@@ -71,4 +71,17 @@ final class FillerLexiconTests: XCTestCase {
         let tokens = FillerLexicon.tokenize("kayak gitu")
         XCTAssertTrue(FillerLexicon.detect(tokens: tokens, newStart: tokens.count).isEmpty)
     }
+
+    // MARK: - Recognizer hints (contextualStrings bias)
+
+    func testRecognizerHintsAreWordLikeAndExcludePureVocalisations() {
+        let hints = FillerLexicon.recognizerHints
+        XCTAssertFalse(hints.isEmpty, "contextualStrings bias list must be populated")
+        XCTAssertTrue(hints.contains("kayak"))
+        XCTAssertTrue(hints.contains("apa ya"))
+        // Pure vocalisations aren't dictionary words, so hinting them does nothing —
+        // they're caught acoustically by FilledPauseDetector instead.
+        XCTAssertFalse(hints.contains("ee"))
+        XCTAssertFalse(hints.contains("mm"))
+    }
 }
