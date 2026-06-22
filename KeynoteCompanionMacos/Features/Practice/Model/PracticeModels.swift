@@ -94,7 +94,8 @@ struct PracticeResult: Sendable {
     private func makeFillerFeedback() -> Feedback {
         let total = fillerEvents.count
         let silentCount = fillerEvents.filter(\.isSilentPause).count
-        let lexicalCount = total - silentCount
+        let filledCount = fillerEvents.filter(\.isFilledPause).count
+        let lexicalCount = total - silentCount - filledCount
         let perMinute = duration > 0 ? Double(total) / (duration / 60) : 0
 
         let subTitle = total == 0
@@ -107,6 +108,7 @@ struct PracticeResult: Sendable {
             }
             var parts: [String] = []
             if silentCount > 0 { parts.append("\(silentCount) long pause\(silentCount == 1 ? "" : "s")") }
+            if filledCount > 0 { parts.append("\(filledCount) drawn-out \u{201C}eee\u{201D} sound\(filledCount == 1 ? "" : "s")") }
             if lexicalCount > 0 { parts.append("\(lexicalCount) spoken filler\(lexicalCount == 1 ? "" : "s")") }
             var tip = parts.joined(separator: " and ") + "."
             if let top = mostUsedFillerToken() {

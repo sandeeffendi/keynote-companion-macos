@@ -112,4 +112,25 @@ final class FillerResultTests: XCTestCase {
         XCTAssertEqual(perSlide[0].value, 2, "Slide 1 merges both visits")
         XCTAssertEqual(perSlide[1].value, 1)
     }
+
+    func testFilledPauseCountsAndIsLabeledSeparately() {
+        // Regression guard: the breakdown must split silent / filled / lexical three
+        // ways. If filled pauses were folded into lexicalCount, "drawn-out" would be
+        // missing and the spoken-filler count would be wrong.
+        let fillers = [
+            FillerEvent(time: 2, kind: .silentPause(duration: 2)),
+            FillerEvent(time: 4, kind: .filledPause(duration: 1)),
+            FillerEvent(time: 6, kind: .lexical(token: "kayak")),
+        ]
+        let result = makeResult(
+            fillers: fillers,
+            intervals: [PracticeSlideInterval(slideNumber: 1, start: 0, end: 10)],
+            duration: 10
+        )
+        let filler = fillerFeedback(of: result)
+        XCTAssertEqual(filler.overall, 3, "All three kinds count toward the total")
+        XCTAssertTrue(filler.tips.contains("1 long pause"), "tips=\(filler.tips)")
+        XCTAssertTrue(filler.tips.contains("drawn-out"), "tips=\(filler.tips)")
+        XCTAssertTrue(filler.tips.contains("1 spoken filler"), "tips=\(filler.tips)")
+    }
 }

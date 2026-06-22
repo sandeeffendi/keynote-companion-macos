@@ -43,6 +43,16 @@ struct SilenceDetector: Sendable {
     private var isSilent = false
     private var silenceStart: TimeInterval?
 
+    // Calibration instrumentation (read by the coordinator's Calibration logger), not
+    // part of detection. `lastCompletedGap` captures EVERY silence-to-speech gap —
+    // including ones rejected for being shorter than `minPauseSeconds` — so the pause
+    // threshold can be chosen from the real distribution. It is set only on the sample
+    // that completes a gap, otherwise nil.
+    private(set) var lastThreshold: Float = 0
+    private(set) var lastCompletedGap: TimeInterval?
+    var currentNoiseFloor: Float { noiseFloor }
+    var isInSilence: Bool { isSilent }
+
     init(config: Config = .default) {
         self.config = config
         self.noiseFloor = config.initialNoiseFloor
@@ -55,14 +65,18 @@ struct SilenceDetector: Sendable {
     mutating func ingest(level: Float, now: TimeInterval) -> FillerEvent? {
         adaptNoiseFloor(to: level)
         let threshold = max(config.absoluteFloor, noiseFloor * config.energyFactor)
+        lastThreshold = threshold
+        lastCompletedGap = nil
 
         if isSilent {
             // Need to clear the threshold by the hysteresis margin to count as speech.
             if level > threshold * config.exitHysteresis {
                 isSilent = false
-                defer { silenceStart = nil }
-                if let start = silenceStart {
+                let start = silenceStart
+                silenceStart = nil
+                if let start {
                     let duration = now - start
+                    lastCompletedGap = duration // recorded even when below minPauseSeconds
                     if duration >= config.minPauseSeconds {
                         return FillerEvent(time: now, kind: .silentPause(duration: duration))
                     }
@@ -80,6 +94,8 @@ struct SilenceDetector: Sendable {
         noiseFloor = config.initialNoiseFloor
         isSilent = false
         silenceStart = nil
+        lastThreshold = 0
+        lastCompletedGap = nil
     }
 
     /// The noise floor tracks the quiet baseline: it snaps DOWN quickly toward a newly
