@@ -46,8 +46,17 @@ struct MediaClock: Sendable {
     }
 
     func now() -> TimeInterval {
+        mediaTime(forWall: wallNow())
+    }
+
+    /// Convert an arbitrary wall timestamp (same source domain as `wallNow`) into media
+    /// seconds, excluding paused spans — so a sample captured on the audio thread can be
+    /// placed on the media timeline instead of being stamped at actor-processing time.
+    /// A timestamp from before the in-progress pause began is not reduced by it (the
+    /// inner `max(0, …)`), and the result is clamped at 0.
+    func mediaTime(forWall wall: TimeInterval) -> TimeInterval {
         guard let start = startWall else { return 0 }
-        let inProgressPause = pauseBeganWall.map { wallNow() - $0 } ?? 0
-        return max(0, (wallNow() - start) - accumulatedPause - inProgressPause)
+        let inProgressPause = pauseBeganWall.map { max(0, wall - $0) } ?? 0
+        return max(0, (wall - start) - accumulatedPause - inProgressPause)
     }
 }
