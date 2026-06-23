@@ -442,6 +442,8 @@ struct RecapView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: .preview))
 }
+#endif
