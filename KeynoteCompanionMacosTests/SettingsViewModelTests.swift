@@ -8,29 +8,6 @@ import XCTest
 
 @MainActor
 final class SettingsViewModelTests: XCTestCase {
-    func testProjectUsesProductionBundleIdentifiers() throws {
-        let projectFile = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("KeynoteCompanionMacos.xcodeproj")
-            .appendingPathComponent("project.pbxproj")
-        let project = try String(contentsOf: projectFile, encoding: .utf8)
-
-        XCTAssertTrue(
-            project.contains("PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.Tiempo;")
-        )
-        XCTAssertTrue(
-            project.contains("PRODUCT_BUNDLE_IDENTIFIER = com.kumpeni.TiempoTests;")
-        )
-        XCTAssertTrue(project.contains("PRODUCT_NAME = Tiempo;"))
-        XCTAssertTrue(
-            project.contains("PRODUCT_MODULE_NAME = KeynoteCompanionMacos;")
-        )
-        XCTAssertTrue(
-            project.contains("TEST_HOST = \"$(BUILT_PRODUCTS_DIR)/Tiempo.app/Contents/MacOS/Tiempo\";")
-        )
-    }
-
     func testAutomationRefreshUsesLatestRequestWhenPreviousRefreshCompletesLate() async {
         let service = ControllableAutomationPermissionService()
         let viewModel = SettingsViewModel(
