@@ -1,0 +1,32 @@
+name: Release Build Check
+
+# Compiles the Release configuration on every PR so that Release-only
+# failures (e.g. a #Preview referencing a #if DEBUG-only helper) are caught
+# here instead of inside the TestFlight upload lane. No signing required.
+
+on:
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  release-build:
+    runs-on: macos-26
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Xcode Version
+        run: xcodebuild -version
+
+      - name: Build (Release, no signing)
+        run: |
+          xcodebuild \
+            -project KeynoteCompanionMacos.xcodeproj \
+            -scheme KeynoteCompanionMacos \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath .build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
