@@ -3,6 +3,7 @@
 //  KeynoteCompanionMacos
 //
 
+import Accelerate
 import AVFoundation
 import Foundation
 import os
@@ -10,9 +11,22 @@ import Speech
 
 private let log = Logger(subsystem: "com.tiempo.practice", category: "Audio")
 
+/// One audio-level sample tapped from the engine: per-buffer RMS plus the capture
+/// host-time (`ProcessInfo.systemUptime` domain, the same source `MediaClock` reads).
+/// Carrying capture time lets the consumer place the sample on the media timeline via
+/// `MediaClock.mediaTime(forWall:)` instead of stamping it at actor-processing time.
+struct AudioLevelSample: Sendable {
+    let rms: Float
+    let hostTime: TimeInterval
+}
+
 protocol AudioCapturing: Sendable {
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws
     func updateSpeechRequest(_ request: SFSpeechAudioBufferRecognitionRequest) async
+    /// A stream of per-buffer RMS audio levels tapped from the SAME engine that feeds
+    /// the recognizer and the file — a third fan-out, no second engine. Drives on-device
+    /// silent-pause and filled-pause detection. Finishes when capture stops.
+    func audioLevels() async -> AsyncStream<AudioLevelSample>
     func pause() async
     func resume() async throws
     func stop() async -> URL?
@@ -41,6 +55,34 @@ private nonisolated final class SpeechRequestBox: @unchecked Sendable {
     }
 }
 
+/// Holds the audio-levels stream continuation so the real-time tap thread can yield
+/// RMS samples while the actor sets/finishes it. Same lock-guarded handoff pattern as
+/// `SpeechRequestBox`: writes happen-before tap reads via install/remove ordering.
+private nonisolated final class AudioLevelBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: AsyncStream<AudioLevelSample>.Continuation?
+
+    func set(_ continuation: AsyncStream<AudioLevelSample>.Continuation?) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.continuation?.finish()
+        self.continuation = continuation
+    }
+
+    func yield(_ sample: AudioLevelSample) {
+        lock.lock()
+        defer { lock.unlock() }
+        continuation?.yield(sample)
+    }
+
+    func finish() {
+        lock.lock()
+        defer { lock.unlock() }
+        continuation?.finish()
+        continuation = nil
+    }
+}
+
 actor AudioCaptureService: AudioCapturing {
     // nonisolated(unsafe) because these are read from the audio tap thread, which
     // runs outside actor isolation. The tap is installed/removed while actor-isolated,
@@ -49,6 +91,7 @@ actor AudioCaptureService: AudioCapturing {
     nonisolated(unsafe) private var audioFile: AVAudioFile?
 
     private let requestBox = SpeechRequestBox()
+    private let levelBox = AudioLevelBox()
     private var recordingURL: URL?
 
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws {
@@ -68,6 +111,7 @@ actor AudioCaptureService: AudioCapturing {
         log.info("Starting capture: sampleRate=\(recordingFormat.sampleRate) channels=\(recordingFormat.channelCount)")
 
         let box = requestBox
+        let levels = levelBox
         let firstBufferLogged = OSAllocatedUnfairLock(initialState: false)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
             let shouldLog = firstBufferLogged.withLock { logged -> Bool in
@@ -79,6 +123,15 @@ actor AudioCaptureService: AudioCapturing {
             }
             box.get()?.append(buffer)
             try? file.write(from: buffer)
+
+            // Third fan-out: cheap per-buffer RMS for on-device pause detection, stamped
+            // with the capture host-time so the consumer maps it onto the media timeline.
+            if let channel = buffer.floatChannelData, buffer.frameLength > 0 {
+                let rms = vDSP.rootMeanSquare(
+                    UnsafeBufferPointer(start: channel[0], count: Int(buffer.frameLength))
+                )
+                levels.yield(AudioLevelSample(rms: rms, hostTime: ProcessInfo.processInfo.systemUptime))
+            }
         }
 
         eng.prepare()
@@ -89,6 +142,17 @@ actor AudioCaptureService: AudioCapturing {
         let old = requestBox.swap(request)
         old?.endAudio()
         log.info("Speech request swapped (previous alive=\(old != nil))")
+    }
+
+    func audioLevels() -> AsyncStream<AudioLevelSample> {
+        // Unbounded: RMS samples are tiny and a session is bounded, so never drop them —
+        // a dropped sample at a silence start/resume would corrupt pause detection.
+        let (stream, continuation) = AsyncStream.makeStream(
+            of: AudioLevelSample.self,
+            bufferingPolicy: .unbounded
+        )
+        levelBox.set(continuation)
+        return stream
     }
 
     func pause() async {
@@ -106,6 +170,7 @@ actor AudioCaptureService: AudioCapturing {
         audioFile = nil
         let old = requestBox.swap(nil)
         old?.endAudio()
+        levelBox.finish()
         return recordingURL
     }
 

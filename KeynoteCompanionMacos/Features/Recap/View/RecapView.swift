@@ -38,6 +38,7 @@ struct RecapView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
                     header
                     highlightSection
+                    fillerSection
                     replaySection
                 }
                 .padding(.horizontal, AppSpacing.xl)
@@ -246,6 +247,74 @@ struct RecapView: View {
         .padding(.vertical, AppSpacing.md)
     }
 
+    // MARK: - Filler words
+
+    @ViewBuilder
+    private var fillerSection: some View {
+        if let filler = viewModel.fillerFeedback {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text("Filler Words")
+                    .font(AppFont.recapSectionTitle)
+                fillerCard(filler)
+            }
+        }
+    }
+
+    private func fillerCard(_ filler: Feedback) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(filler.subTitle)
+                    .font(AppFont.recapCardTitle)
+                Text(filler.tips)
+                    .font(AppFont.recapCardTip)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+            .padding(AppSpacing.lg)
+
+            fillerSlideList
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    @ViewBuilder
+    private var fillerSlideList: some View {
+        let slides = viewModel.fillerSlides
+        if !slides.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(Array(slides.enumerated()), id: \.element.no) { idx, slide in
+                    fillerRow(slide)
+                    if idx < slides.count - 1 {
+                        Divider().padding(.horizontal, AppSpacing.lg)
+                    }
+                }
+            }
+            .padding(.bottom, AppSpacing.sm)
+        }
+    }
+
+    private func fillerRow(_ slide: Slide) -> some View {
+        HStack(spacing: AppSpacing.md) {
+            Text("Slide \(slide.no)")
+                .font(AppFont.recapRow)
+            Spacer()
+            Text("\(slide.value) filler\(slide.value == 1 ? "" : "s")")
+                .font(AppFont.recapRowValue)
+                .foregroundStyle(AppColor.textSecondary)
+            Button {
+                viewModel.playSlideSegment(slide)
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.caption)
+                    .foregroundStyle(AppColor.iconSecondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!viewModel.hasAudio)
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.md)
+    }
+
     // MARK: - Session player
 
     private var replaySection: some View {
@@ -373,8 +442,6 @@ struct RecapView: View {
     }
 }
 
-#if DEBUG
 #Preview {
     RecapView(isFromHistory: true, viewModel: RecapViewModel(recapData: .preview))
 }
-#endif

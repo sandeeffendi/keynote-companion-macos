@@ -29,6 +29,8 @@ final class HomeViewModel: ObservableObject {
     private var openFileRequestID: UUID?
     private var startSlideshowTask: Task<Void, Never>?
     private var startSlideshowRequestID: UUID?
+    
+    private let slideshowStopper: KeynoteSlideshowStopping?
 
     convenience init(state: HomeViewState = .permissionMissing) {
         let appResolver = KeynoteAppResolver()
@@ -57,7 +59,8 @@ final class HomeViewModel: ObservableObject {
         slideshowStarter: KeynoteSlideshowStarting = KeynoteSlideshowStartService(),
         automationStatusStore: KeynoteAutomationStatusStoring =
             UserDefaultsKeynoteAutomationStatusStore(),
-        pollingIntervalNanoseconds: UInt64 = 1_000_000_000
+        pollingIntervalNanoseconds: UInt64 = 1_000_000_000,
+        slideshowStopper: KeynoteSlideshowStopping? = KeynoteSlideshowStopService()
     ) {
         self.state = state
         self.microphonePermissionService = microphonePermissionService
@@ -68,6 +71,7 @@ final class HomeViewModel: ObservableObject {
         self.slideshowStarter = slideshowStarter
         self.automationStatusStore = automationStatusStore
         self.pollingIntervalNanoseconds = pollingIntervalNanoseconds
+        self.slideshowStopper = slideshowStopper
     }
 
     deinit {
@@ -92,6 +96,13 @@ final class HomeViewModel: ObservableObject {
     }
 
     func showActivities() {}
+    
+    func cancelPractice() {
+        let stopper = slideshowStopper
+        Task {
+            await stopper?.stopSlideshow()
+        }
+    }
 
     func openKeynoteFile() {
         openFileTask?.cancel()

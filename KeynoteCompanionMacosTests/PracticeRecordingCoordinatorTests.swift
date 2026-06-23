@@ -184,6 +184,102 @@ final class PracticeRecordingCoordinatorTests: XCTestCase {
         XCTAssertEqual(result.duration, 12, accuracy: 0.001)
     }
 
+    // MARK: - Filler detection
+
+    func testTranscriptProducesLexicalFillerEvents() async throws {
+        let speech = MockSpeechRecognitionService()
+        let coordinator = makeCoordinator(speech: speech)
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        await speech.simulateTranscript("halo kayak banget gini")
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        let result = await coordinator.stop()
+        let lexical = Set(result.fillerEvents.compactMap(\.lexicalToken))
+        XCTAssertEqual(lexical, ["kayak", "gini"], "Only lexicon tokens are recorded as fillers")
+    }
+
+    func testCumulativeTranscriptDoesNotDoubleCountFillers() async throws {
+        let speech = MockSpeechRecognitionService()
+        let coordinator = makeCoordinator(speech: speech)
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        // Recognizer re-emits a growing cumulative transcript; "kayak" appears in both
+        // but must be counted once, and only the newly-added "gini" is added.
+        await speech.simulateTranscript("kayak")
+        await speech.simulateTranscript("kayak banget gini")
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        let result = await coordinator.stop()
+        let lexical = result.fillerEvents.compactMap(\.lexicalToken).sorted()
+        XCTAssertEqual(lexical, ["gini", "kayak"], "Each filler is counted exactly once")
+    }
+
+    func testSilentPauseFromAudioLevelsProducesFillerEvent() async throws {
+        let wall = TestWall()
+        let audio = MockAudioCaptureService()
+        // Frozen noise floor → fixed speech threshold 0.04; min pause 1s.
+        let detector = SilenceDetector(config: .init(
+            minPauseSeconds: 1.0, energyFactor: 4, exitHysteresis: 1.0,
+            floorDownAlpha: 0, floorUpAlpha: 0, absoluteFloor: 0, initialNoiseFloor: 0.01
+        ))
+        let coordinator = PracticeRecordingCoordinator(
+            audioService: audio,
+            speechService: MockSpeechRecognitionService(),
+            slideService: MockSlideTrackingService(),
+            pollingIntervalNanoseconds: 10_000_000_000,
+            clock: MediaClock(wallNow: wall.source()),
+            wpmCalculator: WPMCalculator(smoothingFactor: 0),
+            silenceDetector: detector
+        )
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        // Each sample carries its capture host-time (test-clock domain); the coordinator
+        // maps it to media time, so the pause spans media 1 → 3 regardless of when the
+        // actor happens to process the sample.
+        await audio.simulateAudioLevel(0.2, at: 0)          // speaking at media 0
+        try await Task.sleep(nanoseconds: 100_000_000)
+        wall.advance(to: 1)
+        await audio.simulateAudioLevel(0.001, at: 1)        // silence begins at media 1
+        try await Task.sleep(nanoseconds: 100_000_000)
+        wall.advance(to: 3)
+        await audio.simulateAudioLevel(0.2, at: 3)          // resume at media 3 → 2s pause
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        let result = await coordinator.stop()
+        XCTAssertEqual(result.fillerEvents.filter(\.isSilentPause).count, 1)
+    }
+
+    func testFilledPauseFromAudioLevelsProducesFillerEvent() async throws {
+        let wall = TestWall()
+        let audio = MockAudioCaptureService()
+        // Deterministic filled-pause detector: 0.5s of steady voiced energy, tiny window.
+        let filled = FilledPauseDetector(config: .init(
+            minSeconds: 0.5, minLevel: 0.1, maxVariation: 0.5, windowSamples: 3
+        ))
+        let coordinator = PracticeRecordingCoordinator(
+            audioService: audio,
+            speechService: MockSpeechRecognitionService(),
+            slideService: MockSlideTrackingService(),
+            pollingIntervalNanoseconds: 10_000_000_000,
+            clock: MediaClock(wallNow: wall.source()),
+            wpmCalculator: WPMCalculator(smoothingFactor: 0),
+            filledPauseDetector: filled
+        )
+
+        try await coordinator.start(keynoteFileName: "Test.key")
+        // Steady voiced energy held for 0.6s with no recognized words → a "eeee".
+        await audio.simulateAudioLevel(0.3, at: 0.0)
+        await audio.simulateAudioLevel(0.3, at: 0.2)
+        await audio.simulateAudioLevel(0.3, at: 0.4)
+        await audio.simulateAudioLevel(0.3, at: 0.6)
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        let result = await coordinator.stop()
+        XCTAssertEqual(result.fillerEvents.filter(\.isFilledPause).count, 1)
+        XCTAssertEqual(result.fillerEvents.filter(\.isSilentPause).count, 0, "Voiced energy is not a silent pause")
+    }
+
     private func waitUntil(
         timeout: TimeInterval = 3,
         _ condition: @escaping () async -> Bool
@@ -223,6 +319,7 @@ private final class TestWall: @unchecked Sendable {
 private actor MockAudioCaptureService: AudioCapturing {
     private(set) var startCallCount = 0
     private(set) var updatedRequests: [SFSpeechAudioBufferRecognitionRequest] = []
+    private var levelContinuation: AsyncStream<AudioLevelSample>.Continuation?
 
     func start(speechRequest: SFSpeechAudioBufferRecognitionRequest) async throws {
         startCallCount += 1
@@ -232,15 +329,31 @@ private actor MockAudioCaptureService: AudioCapturing {
         updatedRequests.append(request)
     }
 
+    func audioLevels() async -> AsyncStream<AudioLevelSample> {
+        let (stream, continuation) = AsyncStream.makeStream(of: AudioLevelSample.self)
+        levelContinuation = continuation
+        return stream
+    }
+
+    /// Push one RMS sample (with its capture host-time) into the live audio-levels
+    /// stream (test driver). `hostTime` is in the test clock's wall domain.
+    func simulateAudioLevel(_ rms: Float, at hostTime: TimeInterval) {
+        levelContinuation?.yield(AudioLevelSample(rms: rms, hostTime: hostTime))
+    }
+
     func pause() async {}
     func resume() async throws {}
-    func stop() async -> URL? { nil }
+    func stop() async -> URL? {
+        levelContinuation?.finish()
+        return nil
+    }
 }
 
 private actor MockSpeechRecognitionService: SpeechRecognizing {
     private(set) var startCallCount = 0
     private(set) var requests: [SFSpeechAudioBufferRecognitionRequest] = []
     private var onWordCount: (@Sendable (Int) -> Void)?
+    private var onTranscript: (@Sendable (String) -> Void)?
     private var onTaskEnded: (@Sendable (Bool) -> Void)?
     private var failNextStarts = 0
 
@@ -257,6 +370,7 @@ private actor MockSpeechRecognitionService: SpeechRecognizing {
     func startRecognition(
         request: SFSpeechAudioBufferRecognitionRequest,
         onWordCount: @Sendable @escaping (Int) -> Void,
+        onTranscript: @Sendable @escaping (String) -> Void,
         onTaskEnded: @Sendable @escaping (Bool) -> Void
     ) async throws {
         startCallCount += 1
@@ -266,6 +380,7 @@ private actor MockSpeechRecognitionService: SpeechRecognizing {
             throw SpeechRecognitionError.recognizerUnavailable
         }
         self.onWordCount = onWordCount
+        self.onTranscript = onTranscript
         self.onTaskEnded = onTaskEnded
     }
 
@@ -273,6 +388,10 @@ private actor MockSpeechRecognitionService: SpeechRecognizing {
 
     func simulateWordCount(_ count: Int) {
         onWordCount?(count)
+    }
+
+    func simulateTranscript(_ transcript: String) {
+        onTranscript?(transcript)
     }
 
     func simulateTaskEnded(error: Bool) {

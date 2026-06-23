@@ -23,6 +23,26 @@ struct PracticeResult: Sendable {
     let duration: TimeInterval
     let audioFileURL: URL?
     let keynoteFileName: String
+    /// Filler timeline (silent pauses + lexical fillers), parallel to `wordTimestamps`
+    /// and bucketed into the same `slideIntervals`. Defaulted so existing call sites
+    /// and tests that don't care about fillers keep compiling.
+    let fillerEvents: [FillerEvent]
+
+    init(
+        wordTimestamps: [TimeInterval],
+        slideIntervals: [PracticeSlideInterval],
+        duration: TimeInterval,
+        audioFileURL: URL?,
+        keynoteFileName: String,
+        fillerEvents: [FillerEvent] = []
+    ) {
+        self.wordTimestamps = wordTimestamps
+        self.slideIntervals = slideIntervals
+        self.duration = duration
+        self.audioFileURL = audioFileURL
+        self.keynoteFileName = keynoteFileName
+        self.fillerEvents = fillerEvents
+    }
 
     var finalWordCount: Int { wordTimestamps.count }
 
@@ -57,14 +77,101 @@ struct PracticeResult: Sendable {
             perSlide: perSlide
         )
 
+        // WPM stays feedback[0] (callers/tests index it directly); fillers are [1].
         return RecapModel(
             sesTitle: derivedSessionTitle(),
             sesKeynote: keynoteFileName,
             durationSeconds: duration,
-            feedback: [feedback],
+            feedback: [feedback, makeFillerFeedback()],
             audioFileURL: audioFileURL?.absoluteString,
             createdAt: now
         )
+    }
+
+    /// Build the "Filler Words" feedback: total + per-minute rate as the headline,
+    /// a breakdown (pauses vs spoken fillers + most-used token) as the tip, and a
+    /// per-slide filler COUNT list (reusing the generic `Slide.value` as the count).
+    private func makeFillerFeedback() -> Feedback {
+        let total = fillerEvents.count
+        let silentCount = fillerEvents.filter(\.isSilentPause).count
+        let filledCount = fillerEvents.filter(\.isFilledPause).count
+        let lexicalCount = total - silentCount - filledCount
+        let perMinute = duration > 0 ? Double(total) / (duration / 60) : 0
+
+        let subTitle = total == 0
+            ? "No filler words detected"
+            : "\(total) filler\(total == 1 ? "" : "s") detected"
+
+        let tips: String = {
+            guard total > 0 else {
+                return "Great — your delivery had no noticeable pauses or filler words."
+            }
+            var parts: [String] = []
+            if silentCount > 0 { parts.append("\(silentCount) long pause\(silentCount == 1 ? "" : "s")") }
+            if filledCount > 0 { parts.append("\(filledCount) drawn-out \u{201C}eee\u{201D} sound\(filledCount == 1 ? "" : "s")") }
+            if lexicalCount > 0 { parts.append("\(lexicalCount) spoken filler\(lexicalCount == 1 ? "" : "s")") }
+            var tip = parts.joined(separator: " and ") + "."
+            if let top = mostUsedFillerToken() {
+                tip += " Most used: \u{201C}\(top)\u{201D}."
+            }
+            if perMinute > FillerTuning.idealFillersPerMinute {
+                tip += " Try to pause less and replace filler words with a brief silence."
+            }
+            return tip
+        }()
+
+        return Feedback(
+            title: "Filler Words",
+            overall: total,
+            unit: "fillers",
+            tips: tips,
+            subTitle: subTitle,
+            category: "Filler Words",
+            perSlide: fillerPerSlide()
+        )
+    }
+
+    /// The most frequent lexical filler token, or `nil` if there were none.
+    private func mostUsedFillerToken() -> String? {
+        var counts: [String: Int] = [:]
+        for token in fillerEvents.compactMap(\.lexicalToken) {
+            counts[token, default: 0] += 1
+        }
+        return counts.max(by: { $0.value < $1.value })?.key
+    }
+
+    /// Per-slide filler counts, merged across revisits by slide number (Σ counts),
+    /// ordered by first appearance — same bucketing rule as `mergedPerSlide()`.
+    private func fillerPerSlide() -> [Slide] {
+        let times = fillerEvents.map(\.time)
+        var totals: [Int: (count: Int, firstStart: TimeInterval)] = [:]
+        var order: [Int] = []
+
+        for (index, interval) in slideIntervals.enumerated() {
+            let isLast = index == slideIntervals.count - 1
+            let count = Self.count(times, in: interval, isLast: isLast)
+            if let existing = totals[interval.slideNumber] {
+                totals[interval.slideNumber] = (existing.count + count, existing.firstStart)
+            } else {
+                totals[interval.slideNumber] = (count, interval.start)
+                order.append(interval.slideNumber)
+            }
+        }
+
+        return order.map { slideNumber in
+            let total = totals[slideNumber]!
+            return Slide(no: slideNumber, value: total.count, timestamp: total.firstStart)
+        }
+    }
+
+    /// Count `times` that fall inside `interval`. Half-open `[start, end)`, except the
+    /// final interval whose upper bound is inclusive so a time at exactly `duration`
+    /// isn't dropped (keeps Σ per-slide == total). Shared by words and fillers.
+    static func count(_ times: [TimeInterval], in interval: PracticeSlideInterval, isLast: Bool) -> Int {
+        times.reduce(into: 0) { partial, t in
+            let withinUpper = isLast ? (t <= interval.end) : (t < interval.end)
+            if t >= interval.start && withinUpper { partial += 1 }
+        }
     }
 
     /// Derives a display title from the Keynote filename, stripping the extension
@@ -90,10 +197,7 @@ struct PracticeResult: Sendable {
             // duration: close it inclusively so a word at exactly `duration` is not
             // dropped (which would make Σ per-slide words < total words).
             let isLast = index == slideIntervals.count - 1
-            let words = wordTimestamps.reduce(into: 0) { count, t in
-                let withinUpper = isLast ? (t <= interval.end) : (t < interval.end)
-                if t >= interval.start && withinUpper { count += 1 }
-            }
+            let words = Self.count(wordTimestamps, in: interval, isLast: isLast)
             let span = max(0, interval.end - interval.start)
 
             if let existing = totals[interval.slideNumber] {
@@ -144,10 +248,7 @@ struct PracticeResult: Sendable {
                 let interval = entry.interval
                 // Last interval overall uses inclusive upper bound (same rule as mergedPerSlide).
                 let isLastOverall = entry.originalIndex == slideIntervals.count - 1
-                let words = wordTimestamps.reduce(into: 0) { count, t in
-                    let inUpper = isLastOverall ? (t <= interval.end) : (t < interval.end)
-                    if t >= interval.start && inUpper { count += 1 }
-                }
+                let words = Self.count(wordTimestamps, in: interval, isLast: isLastOverall)
                 let span = max(0, interval.end - interval.start)
                 let wpm = span > 0 ? Int((Double(words) / span) * 60) : 0
 

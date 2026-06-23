@@ -14,6 +14,7 @@ protocol SpeechRecognizing: Sendable {
     func startRecognition(
         request: SFSpeechAudioBufferRecognitionRequest,
         onWordCount: @Sendable @escaping (Int) -> Void,
+        onTranscript: @Sendable @escaping (_ transcript: String) -> Void,
         onTaskEnded: @Sendable @escaping (_ endedWithError: Bool) -> Void
     ) async throws
     func stopRecognition() async
@@ -44,6 +45,7 @@ actor SpeechRecognitionService: SpeechRecognizing {
     func startRecognition(
         request: SFSpeechAudioBufferRecognitionRequest,
         onWordCount: @Sendable @escaping (Int) -> Void,
+        onTranscript: @Sendable @escaping (_ transcript: String) -> Void,
         onTaskEnded: @Sendable @escaping (_ endedWithError: Bool) -> Void
     ) async throws {
         guard let recognizer, recognizer.isAvailable else {
@@ -56,6 +58,10 @@ actor SpeechRecognitionService: SpeechRecognizing {
         // dictation model asset is missing, which fails with kAFAssistantErrorDomain 1101
         // without ever producing a result. Let the system pick on-device or server.
         request.requiresOnDeviceRecognition = false
+        // Bias the language model toward our word-like fillers so it's less likely to
+        // silently normalise them away (helps "eh/anu/kayak/gitu…"). Pure vocalisations
+        // ("eee/emm") aren't dictionary words and are caught acoustically instead.
+        request.contextualStrings = FillerLexicon.recognizerHints
 
         log.info("Starting recognition: locale=\(recognizer.locale.identifier, privacy: .public) available=\(recognizer.isAvailable) onDeviceSupported=\(recognizer.supportsOnDeviceRecognition)")
 
@@ -69,6 +75,9 @@ actor SpeechRecognitionService: SpeechRecognizing {
                     .count
                 log.debug("Partial result: words=\(wordCount) final=\(result.isFinal) text=\(transcription.suffix(60), privacy: .private)")
                 onWordCount(wordCount)
+                // Surface the text too so the coordinator can scan newly-added tokens
+                // for lexical fillers. WPM still rides on the count above — additive.
+                onTranscript(transcription)
             }
 
             if let error = error as NSError? {
